@@ -1,6 +1,6 @@
 # IndiMap Python Library
 
-# Dependencies
+# Python Dependencies
 
 # Installation
 

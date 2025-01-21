@@ -1,9 +1,9 @@
 # IndiMap Python Library
 
-# Python Dependencies
+## Python Dependencies
 
-# Installation
+## Installation
 
-# Usage
+## Usage
 
-# Data
+## Data

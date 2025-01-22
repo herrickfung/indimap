@@ -57,6 +57,10 @@ class CorrMap:
 
 
     def compute_corr_maps(self):
+        """
+        pipeline from raw data to correlation maps.
+        """
+
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
                                               self.map_sep
@@ -76,14 +80,16 @@ class CorrMap:
             'inst_to_inst': map_func.mapping_matrix(model_split, model_split),
         }
 
+
     def compute_corr_analysis(self):
+        """
+        Perform correlation analyses on all correlation maps.
+        """
         map_dicts = [
             'subj_to_inst',
             'subj_to_subj',
             'inst_to_inst',
         ]
-
-
         self.corr_results = {
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
@@ -128,12 +134,14 @@ class CorrMap:
 
 
     def load_all(self):
+        # load all results from file
         loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
         self.corr_maps = loaded['corr_maps'].item()
         self.corr_results = loaded['corr_results'].item()
 
 
     def save_all(self):
+        # save all results to file
         output = {
             'corr_maps': self.corr_maps,
             'corr_results': self.corr_results,
@@ -211,15 +219,15 @@ class CorrMap:
 
         unique_var_pairs = list(combinations(range(data.shape[2]), 2))
 
-        within_results = np.empty(shape=(data.shape[0],    # number of bootstrap splits
-                                  data.shape[1],    # split half
+        within_results = np.empty(shape=(data.shape[0],     # number of bootstrap splits
+                                  data.shape[1],            # split half
                                   len(unique_var_pairs),    # unique metrics pair
-                                  data.shape[axis],    # within subj correlation results
+                                  data.shape[axis],         # within subj correlation results
                                   ))
         between_results = np.empty(shape=(data.shape[0],    # number of bootstrap splits
-                                   data.shape[1],    # split half
-                                   len(unique_var_pairs),    # unique metrics pair
-                                   data.shape[axis],    # average of n-1 correlation results
+                                   data.shape[1],           # split half
+                                   len(unique_var_pairs),   # unique metrics pair
+                                   data.shape[axis],        # average of n-1 correlation results
                                    ))
 
         if axis == 3:

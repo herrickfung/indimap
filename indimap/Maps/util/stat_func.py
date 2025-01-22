@@ -15,7 +15,7 @@ class stat_func:
         if metric == 'pearson':
             result = 0.5 * (np.log(1 + r) - np.log(1 - r))
             if np.isinf(result).any():
-                result[np.isinf(result)] = 1
+                result[np.isinf(result)] = 4
         else:
             result = r
         return result

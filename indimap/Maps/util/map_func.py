@@ -119,13 +119,28 @@ def mapping_matrix(arr1, arr2):
     5. Image
     """
 
+    # check arr1 and arr2 to see if they are exactly the same
+    same = np.array_equal(arr1, arr2)
+
     assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
-    output = np.zeros((arr1.shape[0], arr1.shape[1], arr1.shape[2], arr1.shape[3], arr1.shape[4], arr1.shape[4]))
+
+    if same:
+        output = np.zeros((arr1.shape[0], arr1.shape[1], arr1.shape[2], arr1.shape[3], arr1.shape[4], arr1.shape[4] - 1))
+    else:
+        output = np.zeros((arr1.shape[0], arr1.shape[1], arr1.shape[2], arr1.shape[3], arr1.shape[4], arr1.shape[4]))
+
     for i in range(arr1.shape[0]):
         for j in range(arr1.shape[1]):
             for k in range(arr1.shape[2]):
                 for l in range(arr1.shape[3]):
-                    output[i,j,k,l,:,:] = compute_full_corr_matrix(arr1[i, j, k, l], arr2[i, j, k, l])
+                    result = compute_full_corr_matrix(arr1[i, j, k, l], arr2[i, j, k, l])
+
+                    if same:
+                        np.fill_diagonal(result, np.nan)
+                        result = result[~np.isnan(result)]
+                        result = result.reshape(arr1.shape[4], arr1.shape[4]-1)
+
+                    output[i,j,k,l,:,:] = result
 
     output = stat_func.r2z(output, 'pearson')
     output = np.mean(output, axis=2)

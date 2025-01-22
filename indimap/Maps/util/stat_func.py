@@ -14,8 +14,8 @@ class stat_func:
         '''convert correlation to z-score'''
         if metric == 'pearson':
             result = 0.5 * (np.log(1 + r) - np.log(1 - r))
-            if np.isinf(result).any():
-                result[np.isinf(result)] = 4
+            if np.isnan(result).any():
+                result[np.isnan(result)] = 10
         else:
             result = r
         return result

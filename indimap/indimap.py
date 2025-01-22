@@ -64,8 +64,7 @@ class IndiMap:
     def correlational_mapping(self):
         self.corr_map.compute_corr_maps()
         self.corr_map.compute_corr_analysis()
-        # self.corr_map.compute_mds()
-        # self.corr_map.save_all()
+        self.corr_map.save_all()
 
 
     def rank_based_mapping(self):

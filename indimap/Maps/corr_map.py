@@ -2,18 +2,13 @@
 contains all function related to mapping and analyses by correlation
 '''
 
-from concurrent.futures import ProcessPoolExecutor
 from itertools import combinations
 from scipy.stats import pearsonr
-from sklearn.manifold import MDS
 from pathlib import Path
-from tqdm import tqdm
 import einops
 import numpy as np
 import pandas as pd
 import pickle
-import time
-import torch
 
 from .util.stat_func import stat_func
 from .util import map_func as map_func
@@ -82,54 +77,53 @@ class CorrMap:
         }
 
     def compute_corr_analysis(self):
-        map_dicts = ['subj_to_inst',
-                     'subj_to_subj',
-                     'inst_to_inst',
-                     ]
+        map_dicts = [
+            'subj_to_inst',
+            'subj_to_subj',
+            'inst_to_inst',
+        ]
+
 
         self.corr_results = {
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
 
 
-    def compute_mds(self):
-        data = self.corr_maps['combined_map']
-        results = np.empty(shape=(data.shape[0], data.shape[1], data.shape[2], 2))
-
-        # initalize MDS
-        mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)
-        for ds in range(data.shape[0]):
-            for metric in range(data.shape[1]):
-                input_data = 1 - data[ds, metric]
-                results[ds, metric] = mds.fit_transform(input_data)
-        self.mds_results['mds_results'] = results
-
-
     def do_corr_analysis(self, key):
+        """
+        pipeline for performing all analysis in the correlation map matrix
+        """
+
+        # convert to z scores before correlating again in all below
         data = stat_func.r2z(self.corr_maps[key], 'pearson')
 
-        # subj_btw_split_results = self.corr_btw_split(data, 3)
-        # inst_btw_split_results = self.corr_btw_split(data, 4)
-        # subj_to_group_btw_split_results = self.corr_to_group_btw_split(data, 3)
-        # inst_to_group_btw_split_results = self.corr_to_group_btw_split(data, 4)
+        # compute split half correlations
+        subj_btw_split_results, subj_to_group_btw_split_results = self.corr_btw_split(data, 3)
+        inst_btw_split_results, inst_to_group_btw_split_results = self.corr_btw_split(data, 4)
 
-        # ZZZ start from here
+        # compute between metric correlations if more than one metric is present
         if len(self.map_var) > 1:
-            subj_btw_variable_results = self.corr_subj_btw_variable(data)
-            subj_to_group_variable_results = self.corr_subj_to_group_variable(data)
+            subj_btw_var_results, subj_to_group_btw_var_results = self.corr_btw_var(data, axis = 3)
+            inst_btw_var_results, inst_to_group_btw_var_results = self.corr_btw_var(data, axis = 4)
         else:
-            subj_btw_variable_results = None
-            subj_to_group_variable_results = None
+            subj_btw_var_results = None
+            inst_btw_var_results = None
+            subj_to_group_btw_var_results = None
+            inst_to_group_btw_var_results = None
 
         # package results
         results = {
-            "subj_btw_splits" : subj_btw_split_results,
-            "inst_btw_splits" : inst_btw_split_results,
-            "subj_to_group_splits" : subj_to_group_btw_split_results,
-            "inst_to_group_splits" : inst_to_group_btw_split_results,
-            "subj_btw_variable" : subj_btw_variable_results,
-            "subj_to_group_btw_variable" : subj_to_group_variable_results,
+            "subj_btw_split": subj_btw_split_results,
+            "subj_gp_btw_split": subj_to_group_btw_split_results,
+            "inst_btw_split": inst_btw_split_results,
+            "inst_gp_btw_split": inst_to_group_btw_split_results,
+
+            "subj_btw_var" : subj_btw_var_results,
+            "subj_gp_btw_var" : subj_to_group_btw_var_results,
+            "inst_btw_var" : inst_btw_var_results,
+            "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
+
         return results
 
 
@@ -148,64 +142,111 @@ class CorrMap:
         np.savez(output_path, **output)
 
 
+
     @staticmethod
     def corr_btw_split(data, axis):
         """
-        Compute the correlation between two bootstrap_splits
+        Compute the correlation between bootstrap splits of image data
         ---------------------------------------------------------------------------
         Parameters:
         ---------------------------------------------------------------------------
         data (np.ndarray): The input data array with shape
         [bootstrap split, split-half, metrics, subj, inst].
         axis (str): Specifies axis to compute correlation on.
-        ---------------------------------------------------------------------------
         """
-        results = np.empty(shape=(data.shape[0], data.shape[2], data.shape[axis]))
+
+        unique_spt_pairs = list(combinations(range(data.shape[1]), 2))
+        within_results = np.empty(shape=(data.shape[0],     # number of bootstrap splits
+                                  data.shape[2],            # metric
+                                  len(unique_spt_pairs),    # unique split pair
+                                  data.shape[axis],         # within subj correlation results
+                                  ))
+        between_results = np.empty(shape=(data.shape[0],     # number of bootstrap splits
+                                   data.shape[2],            # metric
+                                   len(unique_spt_pairs),    # unique split pair
+                                   data.shape[axis],         # average of n-1 correlation results
+                                   ))
 
         if axis == 3:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot met subj inst split')
+            data = einops.rearrange(data, 'boot split met subj inst -> boot met split subj inst')
         elif axis == 4:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot met inst subj split')
+            data = einops.rearrange(data, 'boot split met subj inst -> boot met split inst subj')
 
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
-                for k in range(data.shape[2]):
-                    data_slice = data[i, j, k, :, :]
-                    results[i,j,k] = np.corrcoef(data_slice, rowvar=False)[0,1]
-        return results
+                for k, (a,b) in enumerate(unique_spt_pairs):
+                    data_a = data[i,j,a,:,:]
+                    data_b = data[i,j,b,:,:]
+                    full_mat = map_func.compute_full_corr_matrix(data_a, data_b)
 
+                    within_results[i,j,k,:] = np.diagonal(full_mat)
+
+                    full_mat = stat_func.r2z(full_mat, 'pearson')
+                    np.fill_diagonal(full_mat, np.nan)
+                    result = np.nanmean(full_mat, axis = 0)
+                    between_results[i,j,k,:] = result
+
+
+        within_results = stat_func.r2z(within_results, 'pearson')
+        within_results = np.nanmean(within_results, axis = 2)
+        within_results = stat_func.z2r(within_results, 'pearson')
+
+        between_results = np.nanmean(between_results, axis = 2)
+        between_results = stat_func.z2r(between_results, 'pearson')
+
+        return within_results, between_results
 
 
     @staticmethod
-    def corr_to_group_btw_split(data, axis):
+    def corr_btw_var(data, axis):
         """
-        Compute the correlation between subject and n - 1 subjects between two bootstrap splits
+        Compute the correlation between metrics
         ---------------------------------------------------------------------------
         Parameters:
         ---------------------------------------------------------------------------
         data (np.ndarray): The input data array with shape
         [bootstrap split, split-half, metrics, subj, inst].
         axis (str): Specifies axis to compute correlation on.
-        ---------------------------------------------------------------------------
         """
-        results = np.empty(shape=(data.shape[0],    # number of bootstrap splits
+
+        unique_var_pairs = list(combinations(range(data.shape[2]), 2))
+
+        within_results = np.empty(shape=(data.shape[0],    # number of bootstrap splits
                                   data.shape[1],    # split half
-                                  data.shape[2],    # metrics
-                                  data.shape[axis], # subj/inst
+                                  len(unique_var_pairs),    # unique metrics pair
+                                  data.shape[axis],    # within subj correlation results
                                   ))
-        if axis == 4:
+        between_results = np.empty(shape=(data.shape[0],    # number of bootstrap splits
+                                   data.shape[1],    # split half
+                                   len(unique_var_pairs),    # unique metrics pair
+                                   data.shape[axis],    # average of n-1 correlation results
+                                   ))
+
+        if axis == 3:
+            data = einops.rearrange(data, 'boot split met subj inst -> boot split met subj inst')
+        elif axis == 4:
             data = einops.rearrange(data, 'boot split met subj inst -> boot split met inst subj')
 
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
-                for k in range(data.shape[2]):
-                    data_slice = data[i, j, k, :, :]
-                    full_mat = map_func.compute_full_corr_matrix(data_slice, data_slice)
+                for k, (a,b) in enumerate(unique_var_pairs):
+                    data_a = data[i,j,a,:,:]
+                    data_b = data[i,j,b,:,:]
+                    full_mat = map_func.compute_full_corr_matrix(data_a, data_b)
+
+                    within_results[i,j,k,:] = np.diagonal(full_mat)
+
                     full_mat = stat_func.r2z(full_mat, 'pearson')
                     np.fill_diagonal(full_mat, np.nan)
                     result = np.nanmean(full_mat, axis = 0)
-                    result = stat_func.z2r(result, 'pearson')
-                    results[i,j,k,:] = result
-        return results
+                    between_results[i,j,k,:] = result
 
+        within_results = stat_func.r2z(within_results, 'pearson')
+        within_results = np.nanmean(within_results, axis = 1)
+        within_results = stat_func.z2r(within_results, 'pearson')
+
+        between_results = np.nanmean(between_results, axis = 1)
+        between_results = stat_func.z2r(between_results, 'pearson')
+
+        return within_results, between_results
 

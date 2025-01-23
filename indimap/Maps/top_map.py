@@ -1,6 +1,6 @@
-'''
+"""
 contains all function related to mapping and analyses exclusively on top model
-'''
+"""
 
 from scipy.stats import pearsonr
 from itertools import combinations
@@ -41,16 +41,16 @@ class TopMap:
             'inst_to_inst': None,
         }
 
-
     def load_all(self, path):
+        """ Loads precomputed results from a file """
         loaded = np.load(path / 'TopMap_results.npz', allow_pickle=True)
         self.top_maps = loaded['top_maps'].item()
         self.top_ct = loaded['top_ct'].item()
         self.top_corr = loaded['top_corr'].item()
         self.top_results = loaded['top_results'].item()
 
-
     def save_all(self, path):
+        """ Save results to a file """
         output = {
             'top_maps': self.top_maps,
             'top_ct': self.top_ct,
@@ -60,17 +60,17 @@ class TopMap:
         output_path = path / 'TopMap_results.npz'
         np.savez(output_path, **output)
 
-
     def load_map_from_corr(self, path):
+        """ Loads precomputed results from CorrMap class"""
         self.corr_map.load_map()
 
-
     def compute_corr_map(self):
+        """ Computes and saves in CorrMap"""
         self.corr_map.compute_corr_maps()
         self.corr_map.save_map()
 
-
     def compute_top_analysis(self):
+        """Performs the top-level analysis for all subtypes of Maps"""
         name_dicts = [
             'subj_to_inst',
             'subj_to_subj',
@@ -81,8 +81,8 @@ class TopMap:
             self.top_ct[name], self.top_corr[name] = self.get_counts_and_corr(self.top_maps[name])
             self.top_results[name] = self.do_top_analysis(name)
 
-
     def do_top_analysis(self, key):
+        """Main analysis pipeline on the count and correlations of top performers"""
         ct_btw_split_results = self.corr_btw_split(self.top_ct[key])
         corr_btw_split_results = self.corr_btw_split(self.top_corr[key], True)
 
@@ -93,15 +93,12 @@ class TopMap:
             ct_btw_var_results = None
             corr_btw_var_results = None
 
-        results = {
+        return {
             "ct_btw_split": ct_btw_split_results,
             "corr_btw_split": corr_btw_split_results,
             "ct_btw_var": ct_btw_var_results,
             "corr_btw_var": corr_btw_var_results
         }
-
-        return results
-
 
     @staticmethod
     def get_top(data):
@@ -121,7 +118,6 @@ class TopMap:
                     data_slice = data[i, j, k, ...]
                     result[i,j,k,:] = map_func.retain_max_per_row_in_mat(data_slice)
         return result
-
 
     @staticmethod
     def get_counts_and_corr(data):
@@ -157,7 +153,6 @@ class TopMap:
 
         return count_results, corr_results
 
-
     @staticmethod
     def corr_btw_split(data, is_pearson=False):
         """
@@ -180,7 +175,6 @@ class TopMap:
                 data_slice = data[i, j]
                 results[i,j] = np.corrcoef(data_slice)[0,1]
         return results
-
 
     @staticmethod
     def corr_btw_var(data, is_pearson=False):

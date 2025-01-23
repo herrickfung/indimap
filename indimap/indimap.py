@@ -10,6 +10,8 @@ from .Maps.top_map import TopMap
 class IndiMap:
     def __init__(self, config):
         '''
+        ZZZ revise this
+
         initalize analysis with a configuration dictionary
         -----------------------------------------------------------------------
         Parameters:
@@ -57,7 +59,7 @@ class IndiMap:
 
         # Initialize analysis
         self.corr_map = CorrMap(config)
-        # self.rank_map = RankMap(config)
+        self.rank_map = RankMap(config)
         self.top_map = TopMap(config)
 
 

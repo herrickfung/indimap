@@ -117,7 +117,7 @@ class CorrMap:
             inst_to_group_btw_var_results = None
 
         # package results
-        results = {
+        return {
             "subj_btw_split": subj_btw_split_results,
             "subj_gp_btw_split": subj_to_group_btw_split_results,
             "inst_btw_split": inst_btw_split_results,
@@ -129,7 +129,6 @@ class CorrMap:
             "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
 
-        return results
 
 
     def load_all(self):

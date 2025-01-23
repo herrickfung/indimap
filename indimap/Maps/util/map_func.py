@@ -148,6 +148,22 @@ def mapping_matrix(arr1, arr2):
     return output
 
 
+def retain_max_per_row_in_mat(arr):
+    """
+    Simple function to take in a 2D array and return a 2D array
+    with only the max value per row, else nan
+    """
+
+    # Copy the data to avoid modifying the original array
+    max_only = np.full_like(arr, np.nan)
+    # Iterate over each row
+    for row_idx in range(arr.shape[0]):
+        # Find the index of the maximum value in the row
+        for i in range(1, 2):
+            max_col_idx = np.argsort(arr[row_idx, :])[-i]
+            max_only[row_idx, max_col_idx] = arr[row_idx, max_col_idx]
+    return max_only
+
 
 
 

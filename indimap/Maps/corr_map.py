@@ -8,7 +8,6 @@ from pathlib import Path
 import einops
 import numpy as np
 import pandas as pd
-import pickle
 
 from .util.stat_func import stat_func
 from .util import map_func as map_func
@@ -149,6 +148,20 @@ class CorrMap:
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
 
+
+    def load_map(self):
+        # load map only for running TopMap exclusively
+        loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
+        self.corr_maps = loaded['corr_maps'].item()
+
+
+    def save_map(self):
+        # save map only for running TopMap exclusively
+        output = {
+            'corr_maps': self.corr_maps,
+        }
+        output_path = self.output_path / 'CorrMap_results.npz'
+        np.savez(output_path, **output)
 
 
     @staticmethod

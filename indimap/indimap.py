@@ -58,7 +58,7 @@ class IndiMap:
         # Initialize analysis
         self.corr_map = CorrMap(config)
         # self.rank_map = RankMap(config)
-        # self.top_map = TopMap(config)
+        self.top_map = TopMap(config)
 
 
     def correlational_mapping(self):
@@ -80,8 +80,6 @@ class IndiMap:
         else:
             self.top_map.compute_corr_map()
 
-        self.top_map.compute_top_map()
-        self.top_map.compute_top_counts_corr()
         self.top_map.compute_top_analysis()
         self.top_map.save_all(self.output_path)
 

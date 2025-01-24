@@ -8,33 +8,29 @@ from pathlib import Path
 import numpy as np
 import einops
 
-from .util.stat_func import stat_func
-from .util import map_func
 from .corr_map import CorrMap
+from .util import stat_func, map_func
+
 
 class TopMap:
     def __init__(self, config):
         self.config = config
         self.corr_map = CorrMap(self.config)
-
         self.top_maps = {
             'subj_to_inst': None,
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
-
         self.top_ct = {
             'subj_to_inst': None,
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
-
         self.top_corr = {
             'subj_to_inst': None,
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
-
         self.top_results = {
             'subj_to_inst': None,
             'subj_to_subj': None,

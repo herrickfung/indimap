@@ -2,7 +2,7 @@ from sklearn.impute import SimpleImputer
 import numpy as np
 import pandas as pd
 
-from .stat_func import stat_func
+from . import map_func
 
 
 def convert_to_array(df, subj_name, var_name, tgt_name, sep_name):

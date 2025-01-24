@@ -3,19 +3,16 @@ contains all function related to mapping and analyses by correlation
 '''
 
 from itertools import combinations
-from scipy.stats import pearsonr
 from pathlib import Path
 import einops
 import numpy as np
 import pandas as pd
 
-from .util.stat_func import stat_func
-from .util import map_func as map_func
+from .util import stat_func, map_func
 
 
 class CorrMap:
     def __init__(self, config):
-
         default_config = {
             'map_options': {
                 'CorrMap': True,
@@ -37,7 +34,6 @@ class CorrMap:
         self.map_var = self.config.get('map_variables')
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
-
         self.n_bs = self.config['bootstrap_iterations']
         self.bs_seed = self.config['bootstrap_seed']
         self.output_path = Path(self.config['output_path'])
@@ -47,19 +43,42 @@ class CorrMap:
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
-
         self.corr_results = {
             'subj_to_inst': None,
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
 
+    def load_all(self):
+        """ Loads precomputed results from a file """
+        loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
+        self.corr_maps = loaded['corr_maps'].item()
+        self.corr_results = loaded['corr_results'].item()
+
+    def save_all(self):
+        """ Save results to a file """
+        output = {
+            'corr_maps': self.corr_maps,
+            'corr_results': self.corr_results,
+        }
+        output_path = self.output_path / 'CorrMap_results.npz'
+        np.savez(output_path, **output)
+
+    def load_map(self):
+        """ Loads maps for other classes"""
+        loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
+        self.corr_maps = loaded['corr_maps'].item()
+
+    def save_map(self):
+        """ Saves maps for other classes """
+        output = {
+            'corr_maps': self.corr_maps,
+        }
+        output_path = self.output_path / 'CorrMap_results.npz'
+        np.savez(output_path, **output)
 
     def compute_corr_maps(self):
-        """
-        pipeline from raw data to correlation maps.
-        """
-
+        """pipeline from raw data to correlation maps."""
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
                                               self.map_sep
@@ -79,11 +98,8 @@ class CorrMap:
             'inst_to_inst': map_func.mapping_matrix(model_split, model_split),
         }
 
-
     def compute_corr_analysis(self):
-        """
-        Perform correlation analyses on all correlation maps.
-        """
+        """Perform correlation analyses on all correlation maps."""
         map_dicts = [
             'subj_to_inst',
             'subj_to_subj',
@@ -93,12 +109,8 @@ class CorrMap:
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
 
-
     def do_corr_analysis(self, key):
-        """
-        pipeline for performing all analysis in the correlation map matrix
-        """
-
+        """pipeline for performing all analysis in the correlation map matrix"""
         # convert to z scores before correlating again in all below
         data = stat_func.r2z(self.corr_maps[key], 'pearson')
 
@@ -116,7 +128,6 @@ class CorrMap:
             subj_to_group_btw_var_results = None
             inst_to_group_btw_var_results = None
 
-        # package results
         return {
             "subj_btw_split": subj_btw_split_results,
             "subj_gp_btw_split": subj_to_group_btw_split_results,
@@ -128,40 +139,6 @@ class CorrMap:
             "inst_btw_var" : inst_btw_var_results,
             "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
-
-
-
-    def load_all(self):
-        # load all results from file
-        loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
-        self.corr_maps = loaded['corr_maps'].item()
-        self.corr_results = loaded['corr_results'].item()
-
-
-    def save_all(self):
-        # save all results to file
-        output = {
-            'corr_maps': self.corr_maps,
-            'corr_results': self.corr_results,
-        }
-        output_path = self.output_path / 'CorrMap_results.npz'
-        np.savez(output_path, **output)
-
-
-    def load_map(self):
-        # load map only for running TopMap exclusively
-        loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
-        self.corr_maps = loaded['corr_maps'].item()
-
-
-    def save_map(self):
-        # save map only for running TopMap exclusively
-        output = {
-            'corr_maps': self.corr_maps,
-        }
-        output_path = self.output_path / 'CorrMap_results.npz'
-        np.savez(output_path, **output)
-
 
     @staticmethod
     def corr_btw_split(data, axis):

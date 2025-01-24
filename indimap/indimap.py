@@ -70,8 +70,15 @@ class IndiMap:
 
 
     def rank_based_mapping(self):
+        corr_path = self.output_path / 'CorrMap_results.npz'
+
+        if corr_path.is_file():
+            self.rank_map.load_map_from_corr(self.output_path)
+        else:
+            self.rank_map.compute_corr_map()
+
         self.rank_map.compute_rank_analysis()
-        self.rank_map.save_all()
+        self.rank_map.save_all(self.output_path)
 
 
     def top_based_mapping(self):
@@ -97,7 +104,7 @@ class IndiMap:
 
         if self.map_options['RankMap']:
             if self.load_exists:
-                self.rank_map.load_all()
+                self.rank_map.load_all(self.output_path)
             else:
                 self.rank_based_mapping()
 

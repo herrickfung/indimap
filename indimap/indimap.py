@@ -1,3 +1,7 @@
+"""
+Top-level wrapper for all analyses.
+"""
+
 from pathlib import Path
 import numpy as np
 import pickle
@@ -9,28 +13,40 @@ from .Maps.top_map import TopMap
 
 class IndiMap:
     def __init__(self, config):
-        '''
-        ZZZ revise this
+        """
+        Initialize analysis with a configuration dictionary.
 
-        initalize analysis with a configuration dictionary
-        -----------------------------------------------------------------------
         Parameters:
-        -----------------------------------------------------------------------
-        subj_data: Human data
-        inst_data: Model/Instance data
-        map_metric: Metric to perform initial mapping, default: 'pearson'
-        subj_column_name: Subject Identifier in the Dataset, default: 'subj'
-        inst_column_name: Model/Instance Identifier in the Dataset, default: 'inst'
-        human_repeat: Repetition column name in the Dataset, default: 'reps'
-        map_variables: Columns name to map/correlate on, default: ['acc', 'conf']
-        map_together: Variables that will map/correlate together, e.g. image_index, stimulus
-        map_separate: Variables that will map/correlate separately. The resulting map will be average after mapping.
-        map_options: Define which mapping analyses were performed. Default: All True
-        corr_map_option: Define options for correlation mapping.
-        output_path: Path for storing output. default: 'results/'
-        '''
+        --------------------------------------------------------------------------
+        subj_data : pandas.DataFrame
+            Human data (Pandas DataFrame).
+        inst_data : pandas.DataFrame
+            Model/Instance data (Pandas DataFrame).
+        subj_column_name : str, optional
+            Subject identifier in the DataFrame (default: 'subj').
+        inst_column_name : str, optional
+            Model/Instance identifier in the DataFrame (default: 'inst').
+        map_variables : list of str, optional
+            Column names to map/correlate on (default: ['acc', 'conf']).
+        map_together : list of str, optional
+            Variables to map/correlate together (e.g., image_index, stimulus).
+        map_separate : list of str, optional
+            Variables to map/correlate separately. The resulting map will be averaged after mapping.
+        map_options : dict, optional
+            Define which mapping analyses to perform (default: All True).
+        bootstrap_iterations : int, optional
+            Number of bootstrap iterations (default: 1000).
+        bootstrap_seed : int, optional
+            Seed for reproducibility (default: 42).
+        load_exists : bool, optional
+            True if existing results should be loaded (default: False).
+        output_path : str, optional
+            Path for storing output (default: 'results/').
+        """
 
         default_config = {
+            'subj_column_name': 'subj',
+            'inst_column_name': 'inst',
             'map_options': {
                 'CorrMap': True,
                 'RankMap': True,
@@ -43,58 +59,44 @@ class IndiMap:
         }
 
         self.config = {**default_config, **config}
-
-        self.subj = self.config['subj_data']
-        self.inst = self.config['inst_data']
-        self.subj_column_name = self.config['subj_column_name']
-        self.inst_column_name = self.config['inst_column_name']
-        self.map_variables = self.config['map_variables']
-        self.map_together = self.config['map_together']
-        self.map_separate = self.config['map_separate']
-
         self.map_options = self.config['map_options']
         self.load_exists = self.config['load_exists']
         self.output_path = Path(self.config['output_path'])
         self.output_path.mkdir(parents=True, exist_ok=True)
 
-        # Initialize analysis
+        """ Initialize all maps """
         self.corr_map = CorrMap(config)
         self.rank_map = RankMap(config)
         self.top_map = TopMap(config)
 
-
     def correlational_mapping(self):
+        """ CorrMap analysis """
         self.corr_map.compute_corr_maps()
         self.corr_map.compute_corr_analysis()
         self.corr_map.save_all()
 
-
     def rank_based_mapping(self):
+        """ RankMap analysis """
         corr_path = self.output_path / 'CorrMap_results.npz'
-
         if corr_path.is_file():
             self.rank_map.load_map_from_corr(self.output_path)
         else:
             self.rank_map.compute_corr_map()
-
         self.rank_map.compute_rank_analysis()
         self.rank_map.save_all(self.output_path)
 
-
     def top_based_mapping(self):
+        """ TopMap analysis """
         corr_path = self.output_path / 'CorrMap_results.npz'
-
         if corr_path.is_file():
             self.top_map.load_map_from_corr(self.output_path)
         else:
             self.top_map.compute_corr_map()
-
         self.top_map.compute_top_analysis()
         self.top_map.save_all(self.output_path)
 
-
     def map(self):
-        '''run analysis'''
+        """Run/Load all results"""
 
         if self.map_options['CorrMap']:
             if self.load_exists:

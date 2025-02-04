@@ -52,7 +52,7 @@ class RankMap:
             'subj_to_subj',
             'inst_to_inst',
         ]
-        self.results = {
+        self.rank_results = {
             map_type: self.do_rank_analysis(map_type) for map_type in map_dicts
             }
 

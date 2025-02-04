@@ -20,7 +20,7 @@ class IndiMap:
 
         Parameters:
         --------------------------------------------------------------------------
-        task: str, optional
+        task_name: str, optional
             Task name (default: 'Task').
         model_name : str, optional
             Model name (default: 'Model').
@@ -45,11 +45,11 @@ class IndiMap:
         nComp_PCA : int, optional
             Number of components for PCA (default: 10).
         output_path : str, optional
-            Path for storing output (default: 'results/').
+            Path for storing output (default: 'IndiMap_Result/model_name_task_name/').
         """
 
         default_config = {
-            'task': 'Task',
+            'task_name': 'Task',
             'model_name': 'Model',
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
@@ -61,7 +61,7 @@ class IndiMap:
 
         self.config = {**default_config, **config}
 
-        self.task = self.config.get('task')
+        self.task_name = self.config.get('task_name')
         self.model_name = self.config.get('model_name')
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
@@ -83,7 +83,6 @@ class IndiMap:
         self.dims_map = DimsMap(config)
 
     def __str__(self):
-
         n_subjs = self.human[self.human_iden].nunique()
         n_insts = self.model[self.model_iden].nunique()
         n_imgs = self.human[self.map_tgt].nunique()
@@ -92,7 +91,7 @@ class IndiMap:
 --------------------------------------------------------------------------------
 Individual Differences Mapping (IndiMap) analyses
 --------------------------------------------------------------------------------
-Dataset Name:                   {self.model_name} on {self.task}
+Dataset Name:                   {self.model_name.capitalize()} on {self.task_name.capitalize()}
 Number of subjects:             {n_subjs}
 Number of instances:            {n_insts}
 Number of Conditions:           {n_conds}

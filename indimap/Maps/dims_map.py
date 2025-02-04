@@ -28,16 +28,6 @@ class DimsMap:
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
 
-        # convert dataframe to array
-        self.human_arr = map_func.convert_to_array(self.human, self.human_iden,
-                                                   self.map_var, self.map_tgt,
-                                                   self.map_sep
-                                                   )
-        self.model_arr = map_func.convert_to_array(self.model, self.model_iden,
-                                                   self.map_var, self.map_tgt,
-                                                   self.map_sep
-                                                   )
-
         # results
         self.pca_objects = None
         self.pca_results = None
@@ -67,9 +57,21 @@ class DimsMap:
 
     def compute_dims_analysis(self):
         """Perform rank analyses on all maps."""
+        self._convert_data_array()
         self._compute_pca()
         self._compute_mds()
         self.save_all(self.output_path)
+
+    def _convert_data_array(self):
+        # convert dataframe to array
+        self.human_arr = map_func.convert_to_array(self.human, self.human_iden,
+                                                   self.map_var, self.map_tgt,
+                                                   self.map_sep
+                                                   )
+        self.model_arr = map_func.convert_to_array(self.model, self.model_iden,
+                                                   self.map_var, self.map_tgt,
+                                                   self.map_sep
+                                                   )
 
     def _compute_pca(self):
         """full PCA analysis pipeiline"""

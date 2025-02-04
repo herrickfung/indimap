@@ -9,6 +9,8 @@ import pickle
 from .Maps.corr_map import CorrMap
 from .Maps.rank_map import RankMap
 from .Maps.top_map import TopMap
+from .Maps.dims_map import DimsMap
+
 
 
 class IndiMap:
@@ -18,6 +20,10 @@ class IndiMap:
 
         Parameters:
         --------------------------------------------------------------------------
+        task: str, optional
+            Task name (default: 'Task').
+        model_name : str, optional
+            Model name (default: 'Model').
         subj_data : pandas.DataFrame
             Human data (Pandas DataFrame).
         inst_data : pandas.DataFrame
@@ -32,35 +38,41 @@ class IndiMap:
             Variables to map/correlate together (e.g., image_index, stimulus).
         map_separate : list of str, optional
             Variables to map/correlate separately. The resulting map will be averaged after mapping.
-        map_options : dict, optional
-            Define which mapping analyses to perform (default: All True).
         bootstrap_iterations : int, optional
             Number of bootstrap iterations (default: 1000).
         bootstrap_seed : int, optional
             Seed for reproducibility (default: 42).
-        load_exists : bool, optional
-            True if existing results should be loaded (default: False).
+        nComp_PCA : int, optional
+            Number of components for PCA (default: 10).
         output_path : str, optional
             Path for storing output (default: 'results/').
         """
 
         default_config = {
+            'task': 'Task',
+            'model_name': 'Model',
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
-            'map_options': {
-                'CorrMap': True,
-                'RankMap': True,
-                'TopMap': True,
-            },
             'bootstrap_iterations': 1000,
             'bootstrap_seed': 42,
-            'load_exists': False,
+            'nComp_PCA': 10,
             'output_path': 'IndiMap_Result',
         }
 
         self.config = {**default_config, **config}
-        self.map_options = self.config['map_options']
-        self.load_exists = self.config['load_exists']
+
+        self.task = self.config.get('task')
+        self.model_name = self.config.get('model_name')
+        self.human = self.config.get('subj_data')
+        self.model = self.config.get('inst_data')
+        self.human_iden = self.config.get('subj_column_name')
+        self.model_iden = self.config.get('inst_column_name')
+        self.map_var = self.config.get('map_variables')
+        self.map_tgt = self.config.get('map_together')
+        self.map_sep = self.config.get('map_separate')
+        self.n_bs = self.config['bootstrap_iterations']
+        self.bs_seed = self.config['bootstrap_seed']
+        self.n_comps = self.config['nComp_PCA']
         self.output_path = Path(self.config['output_path'])
         self.output_path.mkdir(parents=True, exist_ok=True)
 
@@ -68,50 +80,86 @@ class IndiMap:
         self.corr_map = CorrMap(config)
         self.rank_map = RankMap(config)
         self.top_map = TopMap(config)
+        self.dims_map = DimsMap(config)
 
-    def correlational_mapping(self):
+    def __str__(self):
+
+        n_subjs = self.human[self.human_iden].nunique()
+        n_insts = self.model[self.model_iden].nunique()
+        n_imgs = self.human[self.map_tgt].nunique()
+        n_conds = self.human[self.map_sep].nunique()
+        return f"""
+--------------------------------------------------------------------------------
+Individual Differences Mapping (IndiMap) analyses
+--------------------------------------------------------------------------------
+Dataset Name:                   {self.model_name} on {self.task}
+Number of subjects:             {n_subjs}
+Number of instances:            {n_insts}
+Number of Conditions:           {n_conds}
+Number of Images:               {n_imgs}
+Mapping variables:              {self.map_var}
+Mapping together:               {self.map_tgt}
+Mapping separately:             {self.map_sep}
+Bootstrap iterations:           {self.n_bs}
+Bootstrap random seed:          {self.bs_seed}
+Number of components (PCA):     {self.n_comps}
+--------------------------------------------------------------------------------
+CorrMap Exist:                  {self.corr_map.check_exist()}
+RankMap Exist:                  {self.rank_map.check_exist(self.output_path)}
+TopMap Exist:                   {self.top_map.check_exist(self.output_path)}
+DimsMap Exist:                  {self.dims_map.check_exist()}
+--------------------------------------------------------------------------------
+Output path:                    {self.output_path}
+--------------------------------------------------------------------------------
+"""
+
+    def compute_corr(self, load_exists = False):
         """ CorrMap analysis """
-        self.corr_map.compute_corr_maps()
-        self.corr_map.compute_corr_analysis()
-        self.corr_map.save_all()
+        if load_exists:
+            self.corr_map.load_all()
+        else:
+            self.corr_map.compute_corr_maps()
+            self.corr_map.compute_corr_analysis()
+            self.corr_map.save_all()
 
-    def rank_based_mapping(self):
+    def compute_rank(self, load_exists = False):
         """ RankMap analysis """
-        corr_path = self.output_path / 'CorrMap_results.npz'
-        if corr_path.is_file():
-            self.rank_map.load_map_from_corr(self.output_path)
+        if load_exists:
+            self.rank_map.load_all(self.output_path)
         else:
-            self.rank_map.compute_corr_map()
-        self.rank_map.compute_rank_analysis()
-        self.rank_map.save_all(self.output_path)
+            corr_path = self.output_path / 'CorrMap_results.npz'
+            if corr_path.is_file():
+                self.rank_map.load_map_from_corr(self.output_path)
+            else:
+                self.rank_map.compute_corr_map()
+            self.rank_map.compute_rank_analysis()
+            self.rank_map.save_all(self.output_path)
 
-    def top_based_mapping(self):
+    def compute_top(self, load_exists = False):
         """ TopMap analysis """
-        corr_path = self.output_path / 'CorrMap_results.npz'
-        if corr_path.is_file():
-            self.top_map.load_map_from_corr(self.output_path)
+        if load_exists:
+            self.top_map.load_all(self.output_path)
         else:
-            self.top_map.compute_corr_map()
-        self.top_map.compute_top_analysis()
-        self.top_map.save_all(self.output_path)
-
-    def map(self):
-        """Run/Load all results"""
-
-        if self.map_options['CorrMap']:
-            if self.load_exists:
-                self.corr_map.load_all()
+            corr_path = self.output_path / 'CorrMap_results.npz'
+            if corr_path.is_file():
+                self.top_map.load_map_from_corr(self.output_path)
             else:
-                self.correlational_mapping()
+                self.top_map.compute_corr_map()
+            self.top_map.compute_top_analysis()
+            self.top_map.save_all(self.output_path)
 
-        if self.map_options['RankMap']:
-            if self.load_exists:
-                self.rank_map.load_all(self.output_path)
-            else:
-                self.rank_based_mapping()
+    def compute_dims(self, load_exists = False):
+        """ DimsMap analysis """
+        if load_exists:
+            self.dims_map.load_all(self.output_path)
+        else:
+            self.dims_map.compute_dims_analysis()
+            self.dims_map.save_all(self.output_path)
 
-        if self.map_options['TopMap']:
-            if self.load_exists:
-                self.top_map.load_all(self.output_path)
-            else:
-                self.top_based_mapping()
+    def compute_all(self, load_exists = False):
+        """Compute all results"""
+        self.compute_corr(load_exists)
+        self.compute_rank(load_exists)
+        self.compute_top(load_exists)
+        self.compute_dims(load_exists)
+

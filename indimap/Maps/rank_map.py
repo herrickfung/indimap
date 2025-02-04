@@ -18,6 +18,11 @@ class RankMap:
         self.corr_map = CorrMap(self.config)
         self.rank_results = None
 
+    def check_exist(self, path):
+        """ Check if the file exists """
+        file_path = path / 'RankMap_results.npz'
+        return file_path.exists()
+
     def load_all(self, path):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'RankMap_results.npz', allow_pickle=True)

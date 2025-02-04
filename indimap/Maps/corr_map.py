@@ -1,5 +1,5 @@
 '''
-contains all function related to mapping and analyses by correlation
+contains all functions related to mapping and analyses by correlation
 '''
 
 from itertools import combinations
@@ -13,20 +13,9 @@ from .util import stat_func, map_func
 
 class CorrMap:
     def __init__(self, config):
-        default_config = {
-            'map_options': {
-                'CorrMap': True,
-                'RankMap': True,
-                'TopMap': True,
-            },
-            'bootstrap_iterations': 10,
-            'bootstrap_seed': 42,
-            'load_exists': False,
-            'output_path': 'IndiMap_Result',
-        }
+        """Initializes the CorrMap class."""
 
-        self.config = {**default_config, **config}
-
+        self.config = config
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
         self.human_iden = self.config.get('subj_column_name')
@@ -34,8 +23,8 @@ class CorrMap:
         self.map_var = self.config.get('map_variables')
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
-        self.n_bs = self.config['bootstrap_iterations']
-        self.bs_seed = self.config['bootstrap_seed']
+        self.n_bs = self.config.get('bootstrap_iterations')
+        self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
 
         self.corr_maps = {
@@ -48,6 +37,11 @@ class CorrMap:
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
+
+    def check_exist(self):
+        """ Check whether the file exist """
+        file_path = self.output_path / 'CorrMap_results.npz'
+        return file_path.exists()
 
     def load_all(self):
         """ Loads precomputed results from a file """

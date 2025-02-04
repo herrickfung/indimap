@@ -165,5 +165,38 @@ def retain_max_per_row_in_mat(arr):
     return max_only
 
 
+def shuffle_image_order(arr, seed=42):
+    """
+    Shuffle the order of images in the last axis of the array.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    arr (np.ndarray): The input array.
+    seed (int): Random seed for reproducibility.
+    ---------------------------------------------------------------------------
+    """
+
+    np.random.seed(seed)
+    shuf_arr = np.copy(arr)
+    shuf_arr = shuf_arr[..., np.random.permutation(shuf_arr.shape[-1])]
+    return shuf_arr
+
+
+def center_to_zero(arr):
+    """
+    Center the array to zero in the last axis of the array (images).
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    arr (np.ndarray): The input array.
+    ---------------------------------------------------------------------------
+    """
+
+    cent_arr = np.copy(arr)
+    cent_arr = cent_arr - np.mean(cent_arr, axis = -1, keepdims=True)
+    return cent_arr
+
+
+
 
 

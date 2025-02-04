@@ -37,6 +37,11 @@ class TopMap:
             'inst_to_inst': None,
         }
 
+    def check_exist(self, path):
+        # check whether the map exist
+        file_path = path / 'TopMap_results.npz'
+        return file_path.exists()
+
     def load_all(self, path):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'TopMap_results.npz', allow_pickle=True)

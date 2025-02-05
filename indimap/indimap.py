@@ -2,6 +2,7 @@
 Top-level wrapper for all analyses.
 """
 
+from tqdm import tqdm
 from pathlib import Path
 import numpy as np
 import pickle
@@ -10,8 +11,6 @@ from .Maps.corr_map import CorrMap
 from .Maps.rank_map import RankMap
 from .Maps.top_map import TopMap
 from .Maps.dims_map import DimsMap
-
-
 
 class IndiMap:
     def __init__(self, config):
@@ -53,6 +52,7 @@ class IndiMap:
             'model_name': 'Model',
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
+            'map_variables': ['acc', 'conf'],
             'bootstrap_iterations': 1000,
             'bootstrap_seed': 42,
             'nComp_PCA': 10,
@@ -77,10 +77,10 @@ class IndiMap:
         self.output_path.mkdir(parents=True, exist_ok=True)
 
         """ Initialize all maps """
-        self.corr_map = CorrMap(config)
-        self.rank_map = RankMap(config)
-        self.top_map = TopMap(config)
-        self.dims_map = DimsMap(config)
+        self.corr_map = CorrMap(self.config)
+        self.rank_map = RankMap(self.config)
+        self.top_map = TopMap(self.config)
+        self.dims_map = DimsMap(self.config)
 
     def __str__(self):
         n_subjs = self.human[self.human_iden].nunique()
@@ -157,8 +157,18 @@ Output path:                    {self.output_path}
 
     def compute_all(self, load_exists = False):
         """Compute all results"""
-        self.compute_corr(load_exists)
-        self.compute_rank(load_exists)
-        self.compute_top(load_exists)
-        self.compute_dims(load_exists)
+        tasks = [
+            ('CorrMap', self.compute_corr),
+            ('RankMap', self.compute_rank),
+            ('TopMap', self.compute_top),
+            ('DimsMap', self.compute_dims),
+        ]
 
+        if load_exists:
+            print("Loading existing results ...")
+            for _, func in tasks:
+                func(load_exists)
+        else:
+            for name, func in tqdm(tasks):
+                print(f"Computing {name}")
+                func(load_exists)

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from . import map_func
+from . import stat_func
 
 
 def convert_to_array(df, subj_name, var_name, tgt_name, sep_name):

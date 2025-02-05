@@ -1,9 +1,6 @@
 from indimap import IndiMap
 import pandas as pd
-
-human_data = pd.read_csv('data/human.csv')
-rtnet_data = pd.read_csv('data/rtnet.csv')
-
+    
 config = {
     'task_name': 'MNIST',
     'model_name': 'RTNet',

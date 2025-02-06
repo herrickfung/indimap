@@ -29,7 +29,12 @@ pip install .
 ```
 
 ## Usage
-Refer to the ```example``` directory for usage.
+Please refer to the ```example``` directory for usage and details. To run: 
+
+```bash
+python3 analyze_example.py
+python3 plot_exanmple.py
+```
 
 ## Data
 Human and neural network behavioral data used in the examples are retrieved from:

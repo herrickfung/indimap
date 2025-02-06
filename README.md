@@ -1,7 +1,7 @@
-# IndiMap
+# IndiMap library
 This repo provides the IndiMap library, a Python library designed for analyzing and mapping individual differences in human behavior onto convolutional neural networks in perceptual decision-making tasks. 
 
-## Python Dependencies
+## Python dependencies
 To use the IndiMap library, ensure the following Python dependencies are installed: 
 
 ## Installation

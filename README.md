@@ -16,6 +16,7 @@ Clone the repository and run the following commands in the root directory:
 ```bash
 git clone https://github.com/herrickfung/IndiMap.git
 pip install -r requirements.txt
+pip install .
 ```
 
 If you're running on virtual enviornment, 

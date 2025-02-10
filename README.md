@@ -7,7 +7,7 @@ To use the IndiMap library, ensure the following Python dependencies are install
 1. einops==0.8.0
 2. numpy==1.23.5
 3. pandas==1.5.3
-4. scikit-learn==1.2.1
+4. scikit-learn==1.4.0
 5. scipy==1.11.4
 6. tqdm==4.66.1
 

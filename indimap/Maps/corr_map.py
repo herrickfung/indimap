@@ -10,8 +10,6 @@ import pandas as pd
 
 from .util import stat_func, map_func
 
-# try
-
 
 class CorrMap:
     def __init__(self, config):

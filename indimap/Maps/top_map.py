@@ -72,6 +72,7 @@ class TopMap:
 
     def compute_top_analysis(self):
         """Performs the top-level analysis for all subtypes of Maps"""
+
         name_dicts = [
             'subj_to_inst',
             'subj_to_subj',
@@ -116,7 +117,9 @@ class TopMap:
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 for k in range(data.shape[2]):
+                    # add a small constant to prevent nan
                     data_slice = data[i, j, k, ...]
+                    data_slice = np.where(np.isnan(data_slice), 1e-10, data_slice)
                     result[i,j,k,:] = map_func.retain_max_per_row_in_mat(data_slice)
         return result
 

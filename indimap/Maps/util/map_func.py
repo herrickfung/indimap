@@ -54,6 +54,45 @@ def convert_to_array(df, subj_name, var_name, tgt_name, sep_name):
     return output
 
 
+def split_half(human, model):
+    """
+    Recursive function to split the data into two halves.
+    Ensure that no split contains only one unique value (failed to correlate). 
+    If so, resplit.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    human (np.ndarray): The human data array.
+    model (np.ndarray): The model data array.
+    img (int): Image index to split.
+    ---------------------------------------------------------------------------
+    """
+
+    resplit = False
+    img_axis = human.shape[-1]
+    all_indices = np.arange(img_axis)
+
+    chosen = np.random.choice(img_axis, int(img_axis/2), replace=False)
+    unchosen = np.setdiff1d(all_indices, chosen)
+    for i in range(human.shape[0]):
+        for j in range(human.shape[1]):
+            for k in range(human.shape[2]):
+                check_split = [
+                    len(np.unique(human[i,j,k,chosen])),
+                    len(np.unique(human[i,j,k,unchosen])),
+                    len(np.unique(model[i,j,k,chosen])),
+                    len(np.unique(model[i,j,k,unchosen])),
+                ]
+                if 1 in check_split:
+                    resplit = True
+                    break
+    
+    if resplit:
+        return split_half(human, model)
+    else: 
+        return chosen, unchosen
+            
+
 def split_arr(human, model, n_bs, seed=42):
     """
     Split array into train and test sets.
@@ -74,9 +113,7 @@ def split_arr(human, model, n_bs, seed=42):
     out_model = np.zeros((n_bs, 2, model.shape[0], model.shape[1], model.shape[2], int(model.shape[-1]/2)))
 
     for i in range(n_bs):
-        chosen = np.random.choice(img_axis, int(img_axis/2), replace=False)
-        unchosen = np.setdiff1d(all_indices, chosen)
-
+        chosen, unchosen = split_half(human, model)
         out_human[i, 0, :, :, :, :] = human[:, :, :, chosen]
         out_human[i, 1, :, :, :, :] = human[:, :, :, unchosen]
         out_model[i, 0, :, :, :, :] = model[:, :, :, chosen]

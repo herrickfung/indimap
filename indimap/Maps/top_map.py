@@ -83,7 +83,7 @@ class TopMap:
             self.top_ct[name], self.top_corr[name] = self.get_counts_and_corr(self.top_maps[name])
             self.top_results[name] = self.do_top_analysis(name)
 
-    def do_top_analysis(self, key):
+    def do_top_analysis(self, key) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
         ct_btw_split_results = self.corr_btw_split(self.top_ct[key])
         corr_btw_split_results = self.corr_btw_split(self.top_corr[key], True)
@@ -103,7 +103,7 @@ class TopMap:
         }
 
     @staticmethod
-    def get_top(data):
+    def get_top(data) -> np.ndarray:
         """
         get the top performer of the input data, output shape unchanged
         ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ class TopMap:
         return result
 
     @staticmethod
-    def get_counts_and_corr(data):
+    def get_counts_and_corr(data) -> tuple:
         """
         get the count of top performer for each instance,
         and the best correlation value for each subject
@@ -158,7 +158,7 @@ class TopMap:
         return count_results, corr_results
 
     @staticmethod
-    def corr_btw_split(data, is_pearson=False):
+    def corr_btw_split(data, is_pearson=False) -> np.ndarray:
         """
         correlate count/correlation of subj/inst between split half bootstrap
         ---------------------------------------------------------------------------
@@ -181,7 +181,7 @@ class TopMap:
         return results
 
     @staticmethod
-    def corr_btw_var(data, is_pearson=False):
+    def corr_btw_var(data, is_pearson=False) -> np.ndarray:
         """
         correlate count/correlation of subj/inst between metrics, Acc, RT, Conf, etc.
         ---------------------------------------------------------------------------

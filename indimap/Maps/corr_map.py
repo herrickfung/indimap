@@ -135,7 +135,7 @@ class CorrMap:
         }
 
     @staticmethod
-    def corr_btw_split(data, axis):
+    def corr_btw_split(data, axis) -> tuple:
         """
         Compute the correlation between bootstrap splits of image data
         ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ class CorrMap:
 
 
     @staticmethod
-    def corr_btw_var(data, axis):
+    def corr_btw_var(data, axis) -> tuple:
         """
         Compute the correlation between metrics
         ---------------------------------------------------------------------------

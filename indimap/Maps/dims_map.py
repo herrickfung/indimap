@@ -62,7 +62,7 @@ class DimsMap:
         self._compute_mds()
         self.save_all(self.output_path)
 
-    def _convert_data_array(self):
+    def _convert_data_array(self) -> None:
         # convert dataframe to array
         self.human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                                    self.map_var, self.map_tgt,
@@ -73,7 +73,7 @@ class DimsMap:
                                                    self.map_sep
                                                    )
 
-    def _compute_pca(self):
+    def _compute_pca(self) -> None:
         """full PCA analysis pipeiline"""
 
         # fit all pcas
@@ -95,7 +95,7 @@ class DimsMap:
         # projection
         self.project_all()
 
-    def _compute_mds(self):
+    def _compute_mds(self) -> None:
         """
         full MDS analysis pipeiline
         -----------------------------------------------------------------------
@@ -124,7 +124,7 @@ class DimsMap:
         self.mds_results = results
 
     @staticmethod
-    def fit_pca(arr, n_comps, seed, center=False, shuffle=False):
+    def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:
         """Function to fit PCA and return scaler and pca objects"""
 
         # center and shuffle if needed
@@ -156,7 +156,7 @@ class DimsMap:
             "pca": pca_objs,
         }
 
-    def project_all(self):
+    def project_all(self) -> None:
         """
         Project data for all center variation, human, and model PCA
         -----------------------------------------------------------------------
@@ -209,7 +209,7 @@ class DimsMap:
                 }
 
     @staticmethod
-    def _project(data, pca, scaler, center=False, shuffle=False):
+    def _project(data, pca, scaler, center=False, shuffle=False) -> np.array:
         """
         Function to project data onto PCA components
         -----------------------------------------------------------------------

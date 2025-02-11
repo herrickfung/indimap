@@ -112,7 +112,7 @@ Output path:                    {self.output_path}
 --------------------------------------------------------------------------------
 """
 
-    def compute_corr(self, load_exists = False):
+    def compute_corr(self, load_exists = False) -> None:
         """ CorrMap analysis """
         if load_exists:
             self.corr_map.load_all()
@@ -121,7 +121,7 @@ Output path:                    {self.output_path}
             self.corr_map.compute_corr_analysis()
             self.corr_map.save_all()
 
-    def compute_rank(self, load_exists = False):
+    def compute_rank(self, load_exists = False) -> None:
         """ RankMap analysis """
         if load_exists:
             self.rank_map.load_all(self.output_path)
@@ -134,7 +134,7 @@ Output path:                    {self.output_path}
             self.rank_map.compute_rank_analysis()
             self.rank_map.save_all(self.output_path)
 
-    def compute_top(self, load_exists = False):
+    def compute_top(self, load_exists = False) -> None:
         """ TopMap analysis """
         if load_exists:
             self.top_map.load_all(self.output_path)
@@ -147,7 +147,7 @@ Output path:                    {self.output_path}
             self.top_map.compute_top_analysis()
             self.top_map.save_all(self.output_path)
 
-    def compute_dims(self, load_exists = False):
+    def compute_dims(self, load_exists = False) -> None:
         """ DimsMap analysis """
         if load_exists:
             self.dims_map.load_all(self.output_path)
@@ -155,7 +155,7 @@ Output path:                    {self.output_path}
             self.dims_map.compute_dims_analysis()
             self.dims_map.save_all(self.output_path)
 
-    def compute_all(self, load_exists = False):
+    def compute_all(self, load_exists = False) -> None:
         """Compute all results"""
         tasks = [
             ('CorrMap', self.compute_corr),

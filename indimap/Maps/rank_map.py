@@ -56,7 +56,7 @@ class RankMap:
             map_type: self.do_rank_analysis(map_type) for map_type in map_dicts
             }
 
-    def do_rank_analysis(self, map_type):
+    def do_rank_analysis(self, map_type) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
 
         btw_split = self.optim_sorcd_btw_split(self.corr_map.corr_maps[map_type])
@@ -71,7 +71,7 @@ class RankMap:
             'btw_var': btw_var,
         }
 
-    def compute_sorcd_btw_var(self, data):
+    def compute_sorcd_btw_var(self, data) -> np.ndarray:
         """
         computing SORCD for between variables
         between split were averaged out
@@ -94,7 +94,7 @@ class RankMap:
         return results
 
     @staticmethod
-    def optim_sorcd_btw_split(data):
+    def optim_sorcd_btw_split(data) -> np.ndarray:
         """
         optimized way of computing SORCD,
         refer to the function below for more details

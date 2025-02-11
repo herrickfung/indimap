@@ -6,7 +6,7 @@ from . import map_func
 from . import stat_func
 
 
-def convert_to_array(df, subj_name, var_name, tgt_name, sep_name):
+def convert_to_array(df, subj_name, var_name, tgt_name, sep_name) -> np.ndarray:
     """
     Convert dataframe to numpy array.
     ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def convert_to_array(df, subj_name, var_name, tgt_name, sep_name):
     return output
 
 
-def split_half(human, model):
+def split_half(human, model) -> tuple:
     """
     Recursive function to split the data into two halves.
     Ensure that no split contains only one unique value (failed to correlate). 
@@ -93,7 +93,7 @@ def split_half(human, model):
         return chosen, unchosen
             
 
-def split_arr(human, model, n_bs, seed=42):
+def split_arr(human, model, n_bs, seed=42) -> tuple:
     """
     Split array into train and test sets.
     ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ def split_arr(human, model, n_bs, seed=42):
     return out_human, out_model
 
 
-def compute_full_corr_matrix(arr1, arr2):
+def compute_full_corr_matrix(arr1, arr2) -> np.ndarray:
     """
     Compute the full correlation matrix between two arrays.
     ---------------------------------------------------------------------------
@@ -140,7 +140,7 @@ def compute_full_corr_matrix(arr1, arr2):
     return corr_matrix
 
 
-def mapping_matrix(arr1, arr2):
+def mapping_matrix(arr1, arr2) -> np.ndarray:
     """
     Compute the full correlation matrix between two sets of raw data.
     ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ def mapping_matrix(arr1, arr2):
     return output
 
 
-def retain_max_per_row_in_mat(arr):
+def retain_max_per_row_in_mat(arr) -> np.ndarray:
     """
     Simple function to take in a 2D array and return a 2D array
     with only the max value per row, else nan
@@ -203,7 +203,7 @@ def retain_max_per_row_in_mat(arr):
     return max_only
 
 
-def shuffle_image_order(arr, seed=42):
+def shuffle_image_order(arr, seed=42) -> np.ndarray:
     """
     Shuffle the order of images in the last axis of the array.
     ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def shuffle_image_order(arr, seed=42):
     return shuf_arr
 
 
-def center_to_zero(arr):
+def center_to_zero(arr) -> np.ndarray:
     """
     Center the array to zero in the last axis of the array (images).
     ---------------------------------------------------------------------------

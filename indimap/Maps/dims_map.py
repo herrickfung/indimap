@@ -3,15 +3,13 @@ contains all functions related to dimension analyses
 '''
 
 from pathlib import Path
-from scipy.spatial.distance import cosine
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import MDS
 import einops
 import numpy as np
-import pandas as pd
 
-from .util import stat_func, map_func
+from .util import map_func
 
 
 class DimsMap:

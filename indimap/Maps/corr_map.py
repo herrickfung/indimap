@@ -6,7 +6,6 @@ from itertools import combinations
 from pathlib import Path
 import einops
 import numpy as np
-import pandas as pd
 
 from .util import stat_func, map_func
 
@@ -81,6 +80,7 @@ class CorrMap:
                                               self.map_var, self.map_tgt,
                                               self.map_sep
                                               )
+        map_func.check_for_extreme(human_arr, model_arr)
         human_split, model_split = map_func.split_arr(human_arr,
                                                       model_arr,
                                                       self.n_bs,

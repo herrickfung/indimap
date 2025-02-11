@@ -1,8 +1,6 @@
 from sklearn.impute import SimpleImputer
 import numpy as np
-import pandas as pd
 
-from . import map_func
 from . import stat_func
 
 
@@ -52,6 +50,36 @@ def convert_to_array(df, subj_name, var_name, tgt_name, sep_name) -> np.ndarray:
             output[i,j,:,:] = imputer.fit_transform(output[i,j,:,:])
 
     return output
+
+
+def check_for_extreme(human, model) -> None:
+    """
+    Check for extremely high/low accuracy in the data.
+    Raise warning or error if found.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    human (np.ndarray): The human data array.
+    model (np.ndarray): The model data array.
+    ---------------------------------------------------------------------------
+    """
+
+    human_flag_crit = np.mean(human[:, 0, :, :], axis=-1)
+    model_flag_crit = np.mean(model[:, 0, :, :], axis=-1)
+
+    flag_human = np.where((human_flag_crit > 0.95) | (human_flag_crit < 0.05))[1]
+    flag_model = np.where((model_flag_crit > 0.95) | (model_flag_crit < 0.05))[1]
+    if flag_human.size > 0:
+        print(f"Warning: Human {flag_human} is achieving 95% or 5% accuracy. This may cause problem in the bootstrapping analysis.")
+    if flag_model.size > 0:
+        print(f"Warning: Instances {flag_model} is achieving 95% or 5% accuracy. This may cause problem in the bootstrapping analysis.")
+
+    extreme_human = np.where((human_flag_crit > 0.99) | (human_flag_crit < 0.01))[1]
+    extreme_model = np.where((model_flag_crit > 0.99) | (model_flag_crit < 0.01))[1]
+    if extreme_human.size > 0:
+        raise ValueError(f"Human {extreme_human} is achieving 99% or 1% accuracy, remove this subject")
+    if extreme_model.size > 0:
+        raise ValueError(f"Instances {extreme_model} is achieving 99% or 1% accuracy, remove this instance")
 
 
 def split_half(human, model) -> tuple:

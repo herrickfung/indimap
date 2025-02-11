@@ -2,9 +2,7 @@
 contains all function related to mapping and analyses exclusively on top model
 """
 
-from scipy.stats import pearsonr
 from itertools import combinations
-from pathlib import Path
 import numpy as np
 import einops
 

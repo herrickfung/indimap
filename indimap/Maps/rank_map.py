@@ -3,13 +3,11 @@ contains all function related to mapping and analyses by correlation
 '''
 
 from itertools import combinations
-from pathlib import Path
 from math import comb
 import einops
 import numpy as np
 
 from .corr_map import CorrMap
-from .util import stat_func, map_func
 
 
 class RankMap:

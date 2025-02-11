@@ -2,12 +2,16 @@
 contains all function related to mapping and analyses exclusively on top model
 """
 
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from itertools import combinations
+from scipy.stats import sem
 import numpy as np
 import einops
 
 from .corr_map import CorrMap
 from .util import stat_func, map_func
+rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class TopMap:
@@ -99,6 +103,101 @@ class TopMap:
             "ct_btw_var": ct_btw_var_results,
             "corr_btw_var": corr_btw_var_results
         }
+    
+    def plot_btw_split(self) -> None:
+        """
+        Plot the top analysis results between bootstrap splits.
+        """
+
+        def plot_data(trans_data, title, filename):
+            plt.clf()
+            plt.figure(figsize=(6, 4))
+            colors = plt.cm.get_cmap('Dark2', 8)
+            map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+            for i, map in enumerate(map_types):
+                for j in range(n_metrics):
+                    x_pos = j * 3 + i * 0.8
+                    plt.bar(x_pos, 
+                            trans_data[j, i, :].mean(),
+                            yerr=sem(trans_data[j, i, :]),
+                            color=colors(i),
+                            alpha=0.5,
+                            label=map_labels[i] if j == 0 else None
+                            )
+
+            plt.ylim(0, 1.1)
+            plt.xticks([i * len(map_types) + 0.8  for i in range(n_metrics)], self.corr_map.map_var, fontsize=12)
+            plt.xlabel('Metrics', fontsize=12, fontweight='bold')
+            plt.ylabel('r', fontsize=12, fontweight='bold')
+            plt.legend()
+            plt.title(title, fontsize=14, fontweight='bold')
+            plt.tight_layout()
+            plt.savefig(f'{self.corr_map.graph_path}/{filename}', dpi=384)
+
+        n_metrics = len(self.corr_map.map_var)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+
+        # Plot for count between splits
+        trans_data = np.empty(shape=(n_metrics, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metrics):
+                trans_data[j, i, :] = self.top_results[map]['ct_btw_split'][:, j]
+        plot_data(trans_data, 'Correlation between image splits (Best Instance Count)', 'TopCountBtwSplit.png')
+
+        # Plot for correlation between splits
+        trans_data = np.empty(shape=(n_metrics, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metrics):
+                trans_data[j, i, :] = self.top_results[map]['corr_btw_split'][:, j]
+        plot_data(trans_data, 'Correlation between image splits (Best Instance Correlation)', 'TopCorrBtwSplit.png')
+
+    def plot_btw_var(self) -> None:
+
+        def plot_data(trans_data, title, filename):
+            plt.clf()
+            plt.figure(figsize=(6, 4))
+            colors = plt.cm.get_cmap('Dark2', 8)
+            map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+            xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' for i,j in metric_pairs]
+
+            for i, map in enumerate(map_types):
+                for j in range(n_metric_pair):
+                    x_pos = j * len(map_types) + i * 0.8
+                    plt.bar(x_pos, 
+                            trans_data[j, i, :].mean(),
+                            yerr=sem(trans_data[j, i, :]),
+                            color=colors(i),
+                            alpha=0.5,
+                            label=map_labels[i] if j == 0 else None
+                            )
+
+            plt.ylim(0, 1.1)
+            plt.xticks([i * len(map_types) + 0.8  for i in range(n_metric_pair)], xticks_labels, fontsize=12)
+            plt.xlabel('Pairs of Metric', fontsize=12, fontweight='bold')
+            plt.ylabel('r', fontsize=12, fontweight='bold')
+            plt.legend()
+            plt.title(title, fontsize=14, fontweight='bold')
+            plt.tight_layout()
+            plt.savefig(f'{self.corr_map.graph_path}/{filename}', dpi=384)
+
+        metric_pairs = list(combinations(range(len(self.corr_map.map_var)), 2))
+        n_metric_pair = len(metric_pairs)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+
+        # Plot for count between splits
+        trans_data = np.empty(shape=(n_metric_pair, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metric_pair):
+                trans_data[j, i, :] = self.top_results[map]['ct_btw_var'][:, j]
+        plot_data(trans_data, 'Correlation between metrics (Best Instance Count)', 'TopCountBtwMetrics.png')
+
+        # Plot for correlation between splits
+        trans_data = np.empty(shape=(n_metric_pair, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metric_pair):
+                trans_data[j, i, :] = self.top_results[map]['corr_btw_var'][:, j]
+        plot_data(trans_data, 'Correlation between metrics (Best Instance Correlation)', 'TopCorrBtwMetrics.png')
 
     @staticmethod
     def get_top(data) -> np.ndarray:

@@ -140,6 +140,34 @@ class CorrMap:
             "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
     
+    def plot_map_average(self) -> None:
+        """Plot the average of the map. Would indicate the overall mapping accuracy"""
+
+        plt.clf()
+        plt.figure(figsize=(6, 4))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        n_metrics = len(self.map_var)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+        for i, map_type in enumerate(map_types):
+            for j in range(n_metrics):
+                x_pos = j * 3 + i * 0.8
+                plt.bar(x_pos, 
+                        self.corr_maps[map_type][:,:,j,:,:].mean(),
+                        yerr = sem(self.corr_maps[map_type][:,:,j,:,:], axis = (0,1,2,3)),
+                        color = colors(i), alpha = 0.5, label = map_labels[i] if j == 0 else None
+                        )
+
+        plt.xticks([0.8 + i * 3 for i in range(n_metrics)], self.map_var, fontsize=12)
+        plt.xlabel('Metrics', fontsize=12, fontweight='bold')
+        plt.ylabel('r', fontsize=12, fontweight='bold')
+        plt.legend()
+        plt.title('Average of Correlation Matrices', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.graph_path}/CorrAvg.png', dpi=384)
+
+    
     def plot_btw_split(self) -> None:
         """
         Plot the correlation between bootstrap splits of images

@@ -103,7 +103,34 @@ class TopMap:
             "ct_btw_var": ct_btw_var_results,
             "corr_btw_var": corr_btw_var_results
         }
-    
+
+    def plot_top_average(self) -> None:
+        """ Plot the average top analysis results. Would indicate top mapping accuracy """
+
+        plt.clf()
+        plt.figure(figsize=(6, 4))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        n_metrics = len(self.corr_map.map_var)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+        for i, map_type in enumerate(map_types):
+            for j in range(n_metrics):
+                x_pos = j * 3 + i * 0.8
+                plt.bar(x_pos, 
+                        self.top_corr[map_type][:,:,j,:].mean(),
+                        yerr = sem(self.top_corr[map_type][:,:,j,:], axis = (0,1,2)),
+                        color = colors(i), alpha = 0.5, label = map_labels[i] if j == 0 else None
+                        )
+
+        plt.xticks([0.8 + i * 3 for i in range(n_metrics)], self.corr_map.map_var, fontsize=12)
+        plt.xlabel('Metrics', fontsize=12, fontweight='bold')
+        plt.ylabel('r', fontsize=12, fontweight='bold')
+        plt.legend()
+        plt.title('Average of Correlation Matrices (Top performer)', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.corr_map.graph_path}/TopAvg.png', dpi=384)
+
     def plot_btw_split(self) -> None:
         """
         Plot the top analysis results between bootstrap splits.

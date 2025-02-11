@@ -44,7 +44,9 @@ class IndiMap:
         nComp_PCA : int, optional
             Number of components for PCA (default: 10).
         output_path : str, optional
-            Path for storing output (default: 'IndiMap_Result/model_name_task_name/').
+            Path for storing output (default: 'IndiMap_Result/').
+        graph_path: str, optional
+            Path for storing plots (default: 'IndiMap_Plots/').
         """
 
         default_config = {
@@ -57,6 +59,7 @@ class IndiMap:
             'bootstrap_seed': 42,
             'nComp_PCA': 10,
             'output_path': 'IndiMap_Result',
+            'graph_path': 'IndiMap_Plots',
         }
 
         self.config = {**default_config, **config}
@@ -75,6 +78,8 @@ class IndiMap:
         self.n_comps = self.config['nComp_PCA']
         self.output_path = Path(self.config['output_path'])
         self.output_path.mkdir(parents=True, exist_ok=True)
+        self.graph_path = Path(self.config['graph_path'])
+        self.graph_path.mkdir(parents=True, exist_ok=True)
 
         """ Initialize all maps """
         self.corr_map = CorrMap(self.config)
@@ -109,6 +114,7 @@ TopMap Exist:                   {self.top_map.check_exist(self.output_path)}
 DimsMap Exist:                  {self.dims_map.check_exist()}
 --------------------------------------------------------------------------------
 Output path:                    {self.output_path}
+Graph path:                     {self.graph_path}  
 --------------------------------------------------------------------------------
 """
 

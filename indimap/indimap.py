@@ -44,7 +44,9 @@ class IndiMap:
         nComp_PCA : int, optional
             Number of components for PCA (default: 10).
         output_path : str, optional
-            Path for storing output (default: 'IndiMap_Result/model_name_task_name/').
+            Path for storing output (default: 'IndiMap_Result/').
+        graph_path: str, optional
+            Path for storing plots (default: 'IndiMap_Plots/').
         """
 
         default_config = {
@@ -57,6 +59,7 @@ class IndiMap:
             'bootstrap_seed': 42,
             'nComp_PCA': 10,
             'output_path': 'IndiMap_Result',
+            'graph_path': 'IndiMap_Plots',
         }
 
         self.config = {**default_config, **config}
@@ -75,6 +78,8 @@ class IndiMap:
         self.n_comps = self.config['nComp_PCA']
         self.output_path = Path(self.config['output_path'])
         self.output_path.mkdir(parents=True, exist_ok=True)
+        self.graph_path = Path(self.config['graph_path'])
+        self.graph_path.mkdir(parents=True, exist_ok=True)
 
         """ Initialize all maps """
         self.corr_map = CorrMap(self.config)
@@ -109,10 +114,11 @@ TopMap Exist:                   {self.top_map.check_exist(self.output_path)}
 DimsMap Exist:                  {self.dims_map.check_exist()}
 --------------------------------------------------------------------------------
 Output path:                    {self.output_path}
+Graph path:                     {self.graph_path}  
 --------------------------------------------------------------------------------
 """
 
-    def compute_corr(self, load_exists = False) -> None:
+    def compute_corr(self, load_exists = False):
         """ CorrMap analysis """
         if load_exists:
             self.corr_map.load_all()
@@ -121,7 +127,7 @@ Output path:                    {self.output_path}
             self.corr_map.compute_corr_analysis()
             self.corr_map.save_all()
 
-    def compute_rank(self, load_exists = False) -> None:
+    def compute_rank(self, load_exists = False):
         """ RankMap analysis """
         if load_exists:
             self.rank_map.load_all(self.output_path)
@@ -134,7 +140,7 @@ Output path:                    {self.output_path}
             self.rank_map.compute_rank_analysis()
             self.rank_map.save_all(self.output_path)
 
-    def compute_top(self, load_exists = False) -> None:
+    def compute_top(self, load_exists = False):
         """ TopMap analysis """
         if load_exists:
             self.top_map.load_all(self.output_path)
@@ -147,7 +153,7 @@ Output path:                    {self.output_path}
             self.top_map.compute_top_analysis()
             self.top_map.save_all(self.output_path)
 
-    def compute_dims(self, load_exists = False) -> None:
+    def compute_dims(self, load_exists = False):
         """ DimsMap analysis """
         if load_exists:
             self.dims_map.load_all(self.output_path)
@@ -155,7 +161,7 @@ Output path:                    {self.output_path}
             self.dims_map.compute_dims_analysis()
             self.dims_map.save_all(self.output_path)
 
-    def compute_all(self, load_exists = False) -> None:
+    def compute_all(self, load_exists = False):
         """Compute all results"""
         tasks = [
             ('CorrMap', self.compute_corr),

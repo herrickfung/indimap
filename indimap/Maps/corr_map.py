@@ -2,12 +2,17 @@
 contains all functions related to mapping and analyses by correlation
 '''
 
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from itertools import combinations
+from scipy.stats import sem
 from pathlib import Path
 import einops
 import numpy as np
 
 from .util import stat_func, map_func
+
+rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class CorrMap:
@@ -25,6 +30,7 @@ class CorrMap:
         self.n_bs = self.config.get('bootstrap_iterations')
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
+        self.graph_path = Path(self.config['graph_path'])
 
         self.corr_maps = {
             'subj_to_inst': None,
@@ -133,6 +139,120 @@ class CorrMap:
             "inst_btw_var" : inst_btw_var_results,
             "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
+    
+    def plot_btw_split(self) -> None:
+        """
+        Plot the correlation between bootstrap splits of images
+        """
+
+        n_bars = 2
+        n_maps = 3
+        n_metrics = len(self.map_var)
+        n_subjs = self.human[self.human_iden].nunique()
+
+        # transform data and average across bootstrap splits
+        trans_data = np.empty(shape=(n_metrics, n_maps, n_bars, n_subjs))
+        map_type = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        result_type = ['subj_btw_split', 'subj_gp_btw_split']
+        for i, map in enumerate(map_type):
+            for j, result in enumerate(result_type):
+                trans_data[:, i, j, :] = self.corr_results[map][result].mean(axis = 0)
+
+        # plot here
+        plt.clf()
+        plt.figure(figsize=(8, 6))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Scrambled Subj to Inst', 
+                     'Subj to Subj', 'Scrambled Subj to Subj',
+                     'Inst to Inst', 'Scrambled Inst to Inst'
+                     ]
+
+        for i in range(n_metrics):
+            for j in range(n_maps):
+                for k in range(n_bars):
+                    x_pos = i * 10 + j * 2.5 + k * 0.8
+
+                    plt.bar(x_pos,
+                            trans_data[i,j,k,:].mean(axis = 0),
+                            yerr = sem(trans_data[i,j,k,:], axis = 0),
+                            color = colors(j * 2 + k),
+                            alpha = 0.5,
+                            label = map_labels[j * 2 + k] if i == 0 else None,
+                            )
+
+                    plt.scatter([x_pos-0.25 for _ in range(n_subjs)],
+                                trans_data[i,j,k,:],
+                                color = colors(j * 2 + k),
+                                s = 5,
+                                )
+
+        plt.xticks([i * 10 + 2.5 for i in range(n_metrics)], self.map_var, fontsize=14)
+        plt.ylim(-0.6, 1.1)
+        plt.xlabel('Metrics', fontsize=14, fontweight='bold')
+        plt.ylabel('r', fontsize=14, fontweight='bold')
+        plt.legend()
+        plt.title('Correlation between bootstrap splits of images', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.graph_path}/CorrBtwSplit.png', dpi=384)
+
+
+    def plot_btw_var(self) -> None:
+        """
+        plot the correlation between metrics
+        """
+
+        n_bars = 2
+        n_maps = 3
+        metric_pairs = list(combinations(range(len(self.map_var)), 2))
+        n_metric_pairs = len(metric_pairs)
+        n_subjs = self.human[self.human_iden].nunique()
+
+        # transform data and average across bootstrap splits
+        trans_data = np.empty(shape=(n_metric_pairs, n_maps, n_bars, n_subjs))
+        map_type = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        result_type = ['subj_btw_var', 'subj_gp_btw_var']
+        for i, map in enumerate(map_type):
+            for j, result in enumerate(result_type):
+                trans_data[:, i, j, :] = self.corr_results[map][result].mean(axis = 0)
+
+        # plot here
+        plt.clf()
+        plt.figure(figsize=(8, 6))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Scrambled Subj to Inst', 
+                     'Subj to Subj', 'Scrambled Subj to Subj',
+                     'Inst to Inst', 'Scrambled Inst to Inst'
+                     ]
+        xticks_labels = [ f'{self.map_var[i]}-{self.map_var[j]}' for i,j in metric_pairs]
+
+        for i in range(n_metric_pairs):
+            for j in range(n_maps):
+                for k in range(n_bars):
+                    x_pos = i * 10 + j * 2.5 + k * 0.8
+
+                    plt.bar(x_pos,
+                            trans_data[i,j,k,:].mean(axis = 0),
+                            yerr = sem(trans_data[i,j,k,:], axis = 0),
+                            color = colors(j * 2 + k),
+                            alpha = 0.5,
+                            label = map_labels[j * 2 + k] if i == 0 else None,
+                            )
+
+                    plt.scatter([x_pos-0.25 for _ in range(n_subjs)],
+                                trans_data[i,j,k,:],
+                                color = colors(j * 2 + k),
+                                s = 5,
+                                )
+
+        plt.xticks([i * 10 + 2.5 for i in range(n_metric_pairs)], xticks_labels, fontsize=14)
+        plt.ylim(-0.6, 1.1)
+        plt.xlabel('Pairs of Metric', fontsize=14, fontweight='bold')
+        plt.ylabel('r', fontsize=14, fontweight='bold')
+        plt.legend()
+        plt.title('Correlation between metrics', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.graph_path}/CorrBtwMetrics.png', dpi=384)
+
 
     @staticmethod
     def corr_btw_split(data, axis) -> tuple:

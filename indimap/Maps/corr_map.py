@@ -71,7 +71,7 @@ class CorrMap:
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
 
-    def compute_corr_maps(self):
+    def compute_corr_maps(self) -> None:
         """pipeline from raw data to correlation maps."""
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
@@ -92,7 +92,7 @@ class CorrMap:
             'inst_to_inst': map_func.mapping_matrix(model_split, model_split),
         }
 
-    def compute_corr_analysis(self):
+    def compute_corr_analysis(self) -> None:
         """Perform correlation analyses on all correlation maps."""
         map_dicts = [
             'subj_to_inst',
@@ -103,7 +103,7 @@ class CorrMap:
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
 
-    def do_corr_analysis(self, key):
+    def do_corr_analysis(self, key) -> dict:
         """pipeline for performing all analysis in the correlation map matrix"""
         # convert to z scores before correlating again in all below
         data = stat_func.r2z(self.corr_maps[key], 'pearson')

@@ -45,7 +45,7 @@ class RankMap:
         self.corr_map.compute_corr_maps()
         self.corr_map.save_map()
 
-    def compute_rank_analysis(self):
+    def compute_rank_analysis(self) -> None:
         """Perform rank analyses on all maps."""
         map_dicts = [
             'subj_to_inst',

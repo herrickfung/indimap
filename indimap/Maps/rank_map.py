@@ -2,12 +2,16 @@
 contains all function related to mapping and analyses by correlation
 '''
 
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from itertools import combinations
 from math import comb
+from scipy.stats import sem
 import einops
 import numpy as np
 
 from .corr_map import CorrMap
+rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class RankMap:
@@ -68,6 +72,84 @@ class RankMap:
             'btw_split': btw_split,
             'btw_var': btw_var,
         }
+
+    def plot_btw_split(self) -> None:
+        """
+        plot the rank analysis between bootstrap splits
+        """
+
+        n_metrics = len(self.corr_map.map_var)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        trans_data = np.empty(shape=(n_metrics, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metrics):
+                trans_data[j, i, :] = self.rank_results[map]['btw_split'][:, j]
+
+        # plot here
+        plt.clf()
+        plt.figure(figsize=(6, 4))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+        for i, map in enumerate(map_types):
+            for j in range(n_metrics):
+                x_pos = j * 3 + i * 0.8
+                plt.bar(x_pos, 
+                        trans_data[j, i, :].mean(),
+                        yerr = sem(trans_data[j, i, :]),
+                        color = colors(i),
+                        alpha = 0.5,
+                        label = map_labels[i] if j == 0 else None
+                        )
+
+        plt.xticks([0.8 + i * 3 for i in range(n_metrics)], self.corr_map.map_var, fontsize=12)
+        plt.xlabel('Metrics', fontsize=12, fontweight='bold')
+        plt.ylabel('Sum of ranked correlation differences', fontsize=12, fontweight='bold')
+        plt.legend()
+        plt.title('Rank difference between bootstrap splits of images', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.corr_map.graph_path}/RankBtwSplit.png', dpi=384)
+
+
+    def plot_btw_var(self) -> None:
+        """
+        plot the rank analysis between metrics
+        """
+
+        metric_pairs = list(combinations(range(len(self.corr_map.map_var)), 2))
+        n_metric_pair = len(metric_pairs)
+        map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
+        trans_data = np.empty(shape=(n_metric_pair, len(map_types), self.corr_map.n_bs))
+        for i, map in enumerate(map_types):
+            for j in range(n_metric_pair):
+                trans_data[j, i, :] = self.rank_results[map]['btw_var'][:, j]
+
+        # plot here
+        plt.clf()
+        plt.figure(figsize=(6, 4))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+        xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' for i,j in metric_pairs]
+
+        for i, map in enumerate(map_types):
+            for j in range(n_metric_pair):
+                x_pos = j * 3 + i * 0.8
+                plt.bar(x_pos, 
+                        trans_data[j, i, :].mean(),
+                        yerr = sem(trans_data[j, i, :]),
+                        color = colors(i),
+                        alpha = 0.5,
+                        label = map_labels[i] if j == 0 else None
+                        )
+
+        plt.xticks([0.8 + i * 3 for i in range(n_metric_pair)], xticks_labels, fontsize=12)
+        plt.xlabel('Pairs of Metric', fontsize=12, fontweight='bold')
+        plt.ylabel('Sum of ranked correlation differences', fontsize=12, fontweight='bold')
+        plt.legend()
+        plt.title('Rank difference between metrics', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(f'{self.corr_map.graph_path}/RankBtwMetrics.png', dpi=384)
+
 
     def compute_sorcd_btw_var(self, data) -> np.ndarray:
         """

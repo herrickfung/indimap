@@ -188,4 +188,5 @@ Graph path:                     {self.graph_path}
             ('DimsMap', self.dims_map.plot_all),
         ]
         for name, func in tasks:
+            print(f"Plotting {name}")
             func()

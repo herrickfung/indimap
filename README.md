@@ -5,11 +5,12 @@ This repository provides the IndiMap library, a Python library designed for anal
 To use the IndiMap library, ensure the following Python dependencies are installed. The library is tested exclusively with these versions:
 
 1. einops==0.8.0
-2. numpy==1.23.5
-3. pandas==1.5.3
-4. scikit-learn==1.4.0
-5. scipy==1.11.4
-6. tqdm==4.66.1
+1. matplotlib==3.6.3
+1. numpy==1.23.5
+1. pandas==1.5.3
+1. scikit-learn==1.4.0
+1. scipy==1.11.4
+1. tqdm==4.66.1
 
 ## Installation
 Clone the repository and run the following commands in the root directory:

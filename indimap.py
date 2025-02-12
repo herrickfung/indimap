@@ -178,3 +178,14 @@ Graph path:                     {self.graph_path}
             for name, func in tqdm(tasks):
                 print(f"Computing {name}")
                 func(load_exists)
+
+    def plot_all(self):
+        """ Plot all results """
+        tasks = [
+            ('CorrMap', self.corr_map.plot_all),
+            ('RankMap', self.rank_map.plot_all),
+            ('TopMap', self.top_map.plot_all),
+            ('DimsMap', self.dims_map.plot_all),
+        ]
+        for name, func in tasks:
+            func()

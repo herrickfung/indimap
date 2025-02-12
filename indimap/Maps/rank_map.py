@@ -108,7 +108,8 @@ class RankMap:
         plt.legend()
         plt.title('Rank difference between bootstrap splits of images', fontsize=14, fontweight='bold')
         plt.tight_layout()
-        plt.savefig(f'{self.corr_map.graph_path}/RankBtwSplit.png', dpi=384)
+        fig_path = f'{self.corr_map.graph_path}/RankBtwSplit.png'
+        plt.savefig(fig_path, dpi=384)
 
 
     def plot_btw_var(self) -> None:
@@ -148,7 +149,13 @@ class RankMap:
         plt.legend()
         plt.title('Rank difference between metrics', fontsize=14, fontweight='bold')
         plt.tight_layout()
-        plt.savefig(f'{self.corr_map.graph_path}/RankBtwMetrics.png', dpi=384)
+        fig_path = f'{self.corr_map.graph_path}/RankBtwMetrics.png'
+        plt.savefig(fig_path, dpi=384)
+
+    def plot_all(self) -> None:
+        """Plot all rank analysis results."""
+        self.plot_btw_split()
+        self.plot_btw_var()
 
 
     def compute_sorcd_btw_var(self, data) -> np.ndarray:

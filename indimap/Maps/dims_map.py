@@ -2,14 +2,17 @@
 contains all functions related to dimension analyses
 '''
 
+from matplotlib import rcParams
 from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import MDS
+import matplotlib.pyplot as plt
 import einops
 import numpy as np
 
 from .util import map_func
+rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class DimsMap:
@@ -25,6 +28,7 @@ class DimsMap:
         self.n_comps = self.config.get('nComp_PCA')
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
+        self.graph_path = Path(self.config['graph_path'])
 
         # results
         self.pca_objects = None
@@ -120,6 +124,37 @@ class DimsMap:
         human, model = np.split(results, 2, axis=1)
         results = np.stack((human, model), axis = 1)
         self.mds_results = results
+
+    def plot_mds(self) -> None:
+        """plot mds results"""
+
+        n_metrics = self.mds_results.shape[0]
+
+        plt.clf()
+        fig, ax = plt.subplots(1, n_metrics, figsize=(n_metrics * 3, 3))
+        colors = plt.cm.get_cmap('Dark2', 8)
+
+        for i in range(n_metrics):
+            ax[i].scatter(self.mds_results[i, 0, :, 0], self.mds_results[i, 0, :, 1], 
+                          color=colors(0), label='Human', alpha=0.8, s=10
+                          )
+            ax[i].scatter(self.mds_results[i, 1, :, 0], self.mds_results[i, 1, :, 1],
+                         color=colors(1), label='Model', alpha=0.8, s=10
+                          )
+            ax[i].set_title(f'{self.map_var[i]}', fontsize=14, fontweight='bold')
+            ax[i].set_xlabel('MDS 1', fontsize=12)
+            ax[i].set_ylabel('MDS 2', fontsize=12)
+            ax[i].legend(fontsize=10)
+    
+        plt.suptitle('MDS results for each metric', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        fig_path = f'{self.graph_path}/DimsMDS.png'
+        plt.savefig(fig_path, dpi=384)
+    
+    def plot_all(self) -> None:
+        """plot all results"""
+        self.plot_mds()
+
 
     @staticmethod
     def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:

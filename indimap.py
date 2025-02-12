@@ -180,6 +180,7 @@ Graph path:                     {self.graph_path}
                 func(load_exists)
 
     def plot_all(self):
+        """TDL: Match it with compute_all"""
         """ Plot all results """
         tasks = [
             ('CorrMap', self.corr_map.plot_all),

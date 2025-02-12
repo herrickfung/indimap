@@ -34,7 +34,6 @@ Please refer to the ```example``` directory for usage and details. To run:
 
 ```bash
 python3 analyze_example.py
-python3 plot_exanmple.py
 ```
 
 ## Data

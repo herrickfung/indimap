@@ -150,7 +150,8 @@ class DimsMap:
         plt.tight_layout()
         fig_path = f'{self.graph_path}/DimsMDS.png'
         plt.savefig(fig_path, dpi=384)
-    
+        plt.close()
+
     def plot_all(self) -> None:
         """plot all results"""
         self.plot_mds()

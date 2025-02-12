@@ -131,6 +131,7 @@ class TopMap:
         plt.tight_layout()
         fig_path = f'{self.corr_map.graph_path}/TopAvg.png'
         plt.savefig(fig_path, dpi=384)
+        plt.close()
 
     def plot_btw_split(self) -> None:
         """
@@ -163,6 +164,7 @@ class TopMap:
             plt.tight_layout()
             fig_path = f'{self.corr_map.graph_path}/{filename}'
             plt.savefig(fig_path, dpi=384)
+            plt.close()
 
         n_metrics = len(self.corr_map.map_var)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
@@ -210,6 +212,7 @@ class TopMap:
             plt.tight_layout()
             fig_path = f'{self.corr_map.graph_path}/{filename}'
             plt.savefig(fig_path, dpi=384)
+            plt.close()
 
         metric_pairs = list(combinations(range(len(self.corr_map.map_var)), 2))
         n_metric_pair = len(metric_pairs)

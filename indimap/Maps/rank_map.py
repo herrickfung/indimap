@@ -110,7 +110,7 @@ class RankMap:
         plt.tight_layout()
         fig_path = f'{self.corr_map.graph_path}/RankBtwSplit.png'
         plt.savefig(fig_path, dpi=384)
-
+        plt.close()
 
     def plot_btw_var(self) -> None:
         """
@@ -151,6 +151,7 @@ class RankMap:
         plt.tight_layout()
         fig_path = f'{self.corr_map.graph_path}/RankBtwMetrics.png'
         plt.savefig(fig_path, dpi=384)
+        plt.close()
 
     def plot_all(self) -> None:
         """Plot all rank analysis results."""

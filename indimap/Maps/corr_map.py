@@ -167,6 +167,7 @@ class CorrMap:
         plt.tight_layout()
         fig_path = self.graph_path / 'CorrAvg.png'
         plt.savefig(fig_path, dpi=384)
+        plt.close()
 
     
     def plot_btw_split(self) -> None:
@@ -224,6 +225,7 @@ class CorrMap:
         plt.tight_layout()
         fig_path = self.graph_path / 'CorrBtwSplit.png'
         plt.savefig(fig_path, dpi=384)
+        plt.close()
 
 
     def plot_btw_var(self) -> None:
@@ -283,6 +285,7 @@ class CorrMap:
         plt.tight_layout()
         fig_path = self.graph_path / 'CorrBtwMetrics.png'
         plt.savefig(fig_path, dpi=384)
+        plt.close()
 
     def plot_all(self) -> None:
         """plot all for corr map"""

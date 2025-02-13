@@ -154,6 +154,7 @@ class DimsMap:
         fig_path = f'{self.graph_path}/DimsMDS.png'
         plt.savefig(fig_path, dpi=384)
         plt.close()
+        print(fig_path)
 
     @staticmethod
     def _compute_var(data, result):
@@ -226,11 +227,12 @@ class DimsMap:
         plt.suptitle(f'{pca_obj.capitalize()} PCA Projection ({center})', fontsize=16, fontweight='bold')
         plt.tight_layout()
         if plot_type == 'cumulative':
-            plot_name = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_cumulative_plot.png'
+            fig_path = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_cumulative_plot.png'
         else:
-            plot_name = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_explained_var_plot.png'
-        plt.savefig(plot_name, dpi=384)
+            fig_path = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_explained_var_plot.png'
+        plt.savefig(fig_path, dpi=384)
         plt.close()
+        print(fig_path)
 
     def plot_pca_explained_var(self) -> None:
         """ plot pca results """
@@ -241,11 +243,6 @@ class DimsMap:
             for j, pca_obj in enumerate(type_arr):
                 self._plot_pca_common(center, pca_obj, plot_type='cumulative')
                 self._plot_pca_common(center, pca_obj, plot_type='non-cumulative')
-
-    def plot_all(self) -> None:
-        """plot all results"""
-        self.plot_mds()
-        self.plot_pca_explained_var()
 
     @staticmethod
     def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:
@@ -362,4 +359,3 @@ class DimsMap:
             for j in range(n_mets):
                 results[i,j] = pca[(i,j)].components_ @ scaler[(i,j)].transform(data[i,j,:,:]).T
         return results
-

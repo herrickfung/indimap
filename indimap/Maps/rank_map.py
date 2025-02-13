@@ -111,12 +111,12 @@ class RankMap:
         fig_path = f'{self.corr_map.graph_path}/RankBtwSplit.png'
         plt.savefig(fig_path, dpi=384)
         plt.close()
+        print(fig_path)
 
     def plot_btw_var(self) -> None:
         """
         plot the rank analysis between metrics
         """
-
         metric_pairs = list(combinations(range(len(self.corr_map.map_var)), 2))
         n_metric_pair = len(metric_pairs)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
@@ -152,12 +152,7 @@ class RankMap:
         fig_path = f'{self.corr_map.graph_path}/RankBtwMetrics.png'
         plt.savefig(fig_path, dpi=384)
         plt.close()
-
-    def plot_all(self) -> None:
-        """Plot all rank analysis results."""
-        self.plot_btw_split()
-        self.plot_btw_var()
-
+        print(fig_path)
 
     def compute_sorcd_btw_var(self, data) -> np.ndarray:
         """

@@ -179,14 +179,35 @@ Graph path:                     {self.graph_path}
                 print(f"Computing {name}")
                 func(load_exists)
 
+    def plot_corr(self):
+        """ Plot correlation map """
+        self.corr_map.plot_map_average()
+        self.corr_map.plot_btw_split()
+        self.corr_map.plot_btw_var()
+
+    def plot_rank(self):
+        """ Plot rank map """
+        self.rank_map.plot_btw_split()
+        self.rank_map.plot_btw_var()
+
+    def plot_top(self):
+        """ Plot top map """
+        self.top_map.plot_top_average()
+        self.top_map.plot_btw_split() 
+        self.top_map.plot_btw_var()
+
+    def plot_dims(self):
+        """ Plot dims map """
+        self.dims_map.plot_mds()
+        self.dims_map.plot_pca_explained_var()
+
     def plot_all(self):
-        """TDL: Match it with compute_all"""
         """ Plot all results """
         tasks = [
-            ('CorrMap', self.corr_map.plot_all),
-            ('RankMap', self.rank_map.plot_all),
-            ('TopMap', self.top_map.plot_all),
-            ('DimsMap', self.dims_map.plot_all),
+            ('CorrMap', self.plot_corr),
+            ('RankMap', self.plot_rank),
+            ('TopMap', self.plot_top),
+            ('DimsMap', self.plot_dims),
         ]
         for name, func in tasks:
             print(f"Plotting {name}")

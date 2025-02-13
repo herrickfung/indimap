@@ -165,6 +165,7 @@ class TopMap:
             fig_path = f'{self.corr_map.graph_path}/{filename}'
             plt.savefig(fig_path, dpi=384)
             plt.close()
+            print(fig_path)
 
         n_metrics = len(self.corr_map.map_var)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
@@ -213,6 +214,7 @@ class TopMap:
             fig_path = f'{self.corr_map.graph_path}/{filename}'
             plt.savefig(fig_path, dpi=384)
             plt.close()
+            print(fig_path)
 
         metric_pairs = list(combinations(range(len(self.corr_map.map_var)), 2))
         n_metric_pair = len(metric_pairs)
@@ -231,12 +233,6 @@ class TopMap:
             for j in range(n_metric_pair):
                 trans_data[j, i, :] = self.top_results[map]['corr_btw_var'][:, j]
         plot_data(trans_data, 'Correlation between metrics (Best Instance Correlation)', 'TopCorrBtwMetrics.png')
-
-    def plot_all(self) -> None:
-        """Plot all top analysis results."""
-        self.plot_top_average()
-        self.plot_btw_split()
-        self.plot_btw_var()
 
     @staticmethod
     def get_top(data) -> np.ndarray:

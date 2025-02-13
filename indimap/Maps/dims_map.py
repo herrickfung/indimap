@@ -35,6 +35,9 @@ class DimsMap:
         self.pca_results = None
         self.mds_results = None
 
+        self.human_arr = None
+        self.model_arr = None
+
     def check_exist(self):
         """ Check whether the file exist """
         file_path = self.output_path / 'DimsMap_results.npz'
@@ -152,10 +155,97 @@ class DimsMap:
         plt.savefig(fig_path, dpi=384)
         plt.close()
 
+    @staticmethod
+    def _compute_var(data, result):
+        return np.var(result, axis = 1) / np.sum(np.var(data, axis = 0))
+
+    @staticmethod
+    def _scale_data(data, scaler, cent, shuffle) -> np.array:
+        # center and shuffle if needed
+        if cent:
+            data = map_func.center_to_zero(data)
+        if shuffle:
+            data = map_func.shuffle_image_order(data)
+        return scaler.transform(data)
+
+    def _plot_pca_common(self, center, pca_obj, plot_type='cumulative'):
+        proj_arr = ['P_human', 'P_model', 'P_S_human', 'P_S_model']
+        labels = ['Human', 'Model', 'Shuffled Human', 'Shuffled Model']
+        proj_data_arr = [self.human_arr, self.model_arr, self.human_arr, self.model_arr]
+        shuffle_array = [False, False, True, True]
+
+        n_conds, n_metrics, _, _ = self.human_arr.shape
+        plt.clf()
+        fig, ax = plt.subplots(n_conds, n_metrics, figsize=(6, 4))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        x_axis = np.arange(0, self.n_comps)
+
+        # Ensure ax is always a 2D array
+        if n_conds == 1:
+            ax = np.array([ax])
+        if n_metrics == 1:
+            ax = np.array([ax]).T
+
+        for i in range(n_conds):
+            for j in range(n_metrics):
+                for k, proj in enumerate(proj_arr):
+                    # get the projection results
+                    scaler_objs = self.pca_objects.item()[center][pca_obj]['scaler']
+                    data = self._scale_data(proj_data_arr[k][i, j], scaler_objs[(i, j)],
+                                            cent=(center == 'centered'),
+                                            shuffle=shuffle_array[k]
+                                            )
+                    proj_results = self.pca_results.item()[center][pca_obj][proj]
+
+                    # compute explained variance
+                    explained_variance = self._compute_var(data, proj_results[i, j])
+
+                    if plot_type == 'cumulative':
+                        # plot cumulative explained variance
+                        ax[i, j].plot(x_axis * 5,
+                                      np.cumsum(explained_variance),
+                                      color=colors(k), lw=2, label=labels[k]
+                                      )
+                        ax[i, j].set_ylim(0, 1)
+
+                    else:
+                        # plot explained variance as bars
+                        buffer = [-1.5, -0.5, 0.5, 1.5]
+                        ax[i, j].bar(x_axis * 5 + buffer[k], explained_variance,
+                                     color=colors(k), alpha=0.5, label=labels[k],
+                                     width=1
+                                     )
+
+                    ax[i, j].legend(fontsize=6)
+                    ax[i, j].set_xlabel('PCA Components', fontsize=6, fontweight='bold')
+                    ax[i, j].set_ylabel('Explained Variance', fontsize=6, fontweight='bold')
+                    ax[i, j].set_xticks(x_axis * 5, x_axis + 1, fontsize=6)
+                    ax[i, j].tick_params(axis='y', labelsize=8)
+                    ax[i, j].set_title(f"Cond {i}, {self.map_var[j]}", fontsize=10, fontweight='bold')
+
+        plt.suptitle(f'{pca_obj.capitalize()} PCA Projection ({center})', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        if plot_type == 'cumulative':
+            plot_name = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_cumulative_plot.png'
+        else:
+            plot_name = f'{self.graph_path}/DimsPCA_{center}_{pca_obj}_explained_var_plot.png'
+        plt.savefig(plot_name, dpi=384)
+        plt.close()
+
+    def plot_pca_explained_var(self) -> None:
+        """ plot pca results """
+        self._convert_data_array()
+        center_arr = ['centered', 'uncentered']
+        type_arr = ['human', 'model']
+        for i, center in enumerate(center_arr):
+            for j, pca_obj in enumerate(type_arr):
+                self._plot_pca_common(center, pca_obj, plot_type='cumulative')
+                self._plot_pca_common(center, pca_obj, plot_type='non-cumulative')
+
     def plot_all(self) -> None:
         """plot all results"""
         self.plot_mds()
-
+        self.plot_pca_explained_var()
 
     @staticmethod
     def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:
@@ -217,6 +307,7 @@ class DimsMap:
             for t, t_dict in enumerate(type_dict):
                 scaler = all_pcas[c_dict][t_dict]['scaler']
                 pca = all_pcas[c_dict][t_dict]['pca']
+
                 self.pca_results[c_dict][t_dict] = {
                     'P_human': self._project(data = self.human_arr,
                                              pca = pca,

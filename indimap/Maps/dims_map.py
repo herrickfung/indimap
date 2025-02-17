@@ -121,7 +121,7 @@ class DimsMap:
                 merge_arr[i, :, :],
                 merge_arr[i, :, :]
             )
-            results[i,...] = mds.fit_transform(corr_mat)
+            results[i,...] = mds.fit_transform(1 - corr_mat)
 
         # reshape results to split human and model
         human, model = np.split(results, 2, axis=1)

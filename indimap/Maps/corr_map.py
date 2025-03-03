@@ -154,7 +154,7 @@ class CorrMap:
             for j in range(n_metrics):
                 x_pos = j * 3 + i * 0.8
                 plt.bar(x_pos, 
-                        self.corr_maps[map_type][:,:,j,:,:].mean(),
+                        self.corr_maps[map_type][:,:,j,:,:].nanmean(),
                         yerr = sem(self.corr_maps[map_type][:,:,j,:,:], axis = (0,1,2,3)),
                         color = colors(i), alpha = 0.5, label = map_labels[i] if j == 0 else None
                         )

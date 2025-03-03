@@ -85,7 +85,7 @@ def check_for_extreme(human, model) -> None:
 def split_half(human, model) -> tuple:
     """
     Recursive function to split the data into two halves.
-    Ensure that no split contains only one unique value (failed to correlate). 
+    Ensure that no split contains only one unique value (failed to correlate).
     If so, resplit.
     ---------------------------------------------------------------------------
     Parameters:
@@ -114,12 +114,12 @@ def split_half(human, model) -> tuple:
                 if 1 in check_split:
                     resplit = True
                     break
-    
+
     if resplit:
         return split_half(human, model)
-    else: 
+    else:
         return chosen, unchosen
-            
+
 
 def split_arr(human, model, n_bs, seed=42) -> tuple:
     """

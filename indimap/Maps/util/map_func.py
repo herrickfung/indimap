@@ -137,8 +137,12 @@ def split_arr(human, model, n_bs, seed=42) -> tuple:
     np.random.seed(seed)
     img_axis = human.shape[-1]
     all_indices = np.arange(img_axis)
-    out_human = np.zeros((n_bs, 2, human.shape[0], human.shape[1], human.shape[2], int(human.shape[-1]/2)))
-    out_model = np.zeros((n_bs, 2, model.shape[0], model.shape[1], model.shape[2], int(model.shape[-1]/2)))
+    out_human = np.zeros((n_bs, 2, human.shape[0], human.shape[1], 
+                          human.shape[2], int(human.shape[-1]/2)
+                          ))
+    out_model = np.zeros((n_bs, 2, model.shape[0], model.shape[1], 
+                          model.shape[2], int(model.shape[-1]/2)
+                          ))
 
     for i in range(n_bs):
         chosen, unchosen = split_half(human, model)
@@ -191,9 +195,15 @@ def mapping_matrix(arr1, arr2) -> np.ndarray:
     assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
     if same:
-        output = np.zeros((arr1.shape[0], arr1.shape[1], arr1.shape[2], arr1.shape[3], arr1.shape[4], arr1.shape[4] - 1))
+        output = np.zeros((arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[3], 
+                           arr1.shape[4], arr1.shape[4] - 1
+                           ))
     else:
-        output = np.zeros((arr1.shape[0], arr1.shape[1], arr1.shape[2], arr1.shape[3], arr1.shape[4], arr1.shape[4]))
+        output = np.zeros((arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[3], 
+                           arr1.shape[4], arr1.shape[4]
+                           ))
 
     for i in range(arr1.shape[0]):
         for j in range(arr1.shape[1]):

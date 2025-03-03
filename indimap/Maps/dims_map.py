@@ -116,7 +116,9 @@ class DimsMap:
         # perform mds
         results = np.empty((merge_arr.shape[0], merge_arr.shape[1], 2))
         for i in range(merge_arr.shape[0]):
-            mds = MDS(n_components=2, dissimilarity='precomputed', random_state=self.bs_seed)
+            mds = MDS(n_components=2, dissimilarity='precomputed', 
+                      random_state=self.bs_seed
+                      )
             corr_mat = map_func.compute_full_corr_matrix(
                 merge_arr[i, :, :],
                 merge_arr[i, :, :]

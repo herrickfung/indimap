@@ -156,7 +156,9 @@ class TopMap:
                             )
 
             # plt.ylim(0, 1.1)
-            plt.xticks([i * len(map_types) + 0.8  for i in range(n_metrics)], self.corr_map.map_var, fontsize=12)
+            plt.xticks([i * len(map_types) + 0.8  for i in range(n_metrics)], 
+                       self.corr_map.map_var, fontsize=12
+                       )
             plt.xlabel('Metrics', fontsize=12, fontweight='bold')
             plt.ylabel('r', fontsize=12, fontweight='bold')
             plt.legend()

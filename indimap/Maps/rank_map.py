@@ -130,7 +130,9 @@ class RankMap:
         plt.figure(figsize=(6, 4))
         colors = plt.cm.get_cmap('Dark2', 8)
         map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
-        xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' for i,j in metric_pairs]
+        xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' 
+                         for i,j in metric_pairs
+                         ]
 
         for i, map in enumerate(map_types):
             for j in range(n_metric_pair):

@@ -1,5 +1,10 @@
 '''
 contains all functions related to prediction analyses
+
+TDL:
+1. edit pred_from_fit function
+2. edit for cross metric predictions
+3. plot graph
 '''
 
 from pathlib import Path

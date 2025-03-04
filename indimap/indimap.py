@@ -11,6 +11,7 @@ from .Maps.corr_map import CorrMap
 from .Maps.rank_map import RankMap
 from .Maps.top_map import TopMap
 from .Maps.dims_map import DimsMap
+from .Maps.pred_map import PredMap
 
 class IndiMap:
     def __init__(self, config):

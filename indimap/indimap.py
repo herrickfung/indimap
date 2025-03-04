@@ -87,6 +87,7 @@ class IndiMap:
         self.rank_map = RankMap(self.config)
         self.top_map = TopMap(self.config)
         self.dims_map = DimsMap(self.config)
+        self.pred_map = PredMap(self.config)
 
     def __str__(self):
         n_subjs = self.human[self.human_iden].nunique()
@@ -113,6 +114,7 @@ CorrMap Exist:                  {self.corr_map.check_exist()}
 RankMap Exist:                  {self.rank_map.check_exist(self.output_path)}
 TopMap Exist:                   {self.top_map.check_exist(self.output_path)}
 DimsMap Exist:                  {self.dims_map.check_exist()}
+PredMap Exist:                  {self.pred_map.check_exist()}
 --------------------------------------------------------------------------------
 Output path:                    {self.output_path}
 Graph path:                     {self.graph_path}  
@@ -162,6 +164,14 @@ Graph path:                     {self.graph_path}
             self.dims_map.compute_dims_analysis()
             self.dims_map.save_all(self.output_path)
 
+    def compute_pred(self, load_exists = False):
+        """ Prediction analyses """
+        if load_exists:
+            self.pred_map.load_all(self.output_path)
+        else:
+            self.pred_map.compute_pred_maps()
+            self.pred_map.save_all(self.output_path)
+
     def compute_all(self, load_exists = False):
         """Compute all results"""
         tasks = [
@@ -169,6 +179,7 @@ Graph path:                     {self.graph_path}
             ('RankMap', self.compute_rank),
             ('TopMap', self.compute_top),
             ('DimsMap', self.compute_dims),
+            ('PredMap', self.compute_pred),
         ]
 
         if load_exists:

@@ -2,17 +2,18 @@
 contains all functions related to prediction analyses
 
 TDL:
-1. edit pred_from_fit function
 2. edit for cross metric predictions
 3. plot graph
 '''
 
+from sklearn.model_selection import KFold
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from pathlib import Path
 from scipy.stats import sem
 import numpy as np
 
 from .corr_map import CorrMap
-from .util import stat_func, map_func
+from .util import map_func
 
 class PredMap:
     def __init__(self, config):
@@ -64,7 +65,7 @@ class PredMap:
             self.pred_from_rand(source)
             self.pred_from_avg(source)
             self.pred_from_corr(source)
-            # self.pred_from_fit(source)
+            self.pred_from_fit(source)
         
     def compute_corr_map(self):
         """ Load CorrMap object """
@@ -172,7 +173,61 @@ class PredMap:
 
         self.pred_results[source]['corr'] = output
 
-
     def pred_from_fit(self, source='subj') -> None:
         """ Perform prediction analyses from fitting """
-        pass
+
+        # train weights on first split
+        X = self.raw_mat[source][:, 0, :, :, :]
+        n_bs, n_met, n_subjs, _ = X.shape
+        W = np.empty((n_bs, n_met, n_subjs, n_subjs - 1))
+        for bs in range(n_bs):
+            for met in range(n_met):
+                for subj in range(n_subjs):
+                    other_subjs = [i for i in range(n_subjs) if i != subj]
+                    W[bs, met, subj] = self.train_weights(
+                        X[bs, met, other_subjs, :], 
+                        X[bs, met, subj, :],
+                        model=LinearRegression(),
+                        )
+
+        # predict on second split
+        X = self.raw_mat[source][:, 1, :, :, :]
+        Y = self.raw_mat['subj'][:, 1, :, :, :]
+
+        n_bs, n_met, n_subjs, _ = Y.shape
+        output = np.empty((n_bs, n_met, n_subjs))
+
+        for bs in range(n_bs):
+            for met in range(n_met):
+                for subj in range(n_subjs):
+                    other_subjs = [i for i in range(n_subjs) if i != subj]
+                    x = X[bs, met, other_subjs, :]
+                    w = W[bs, met, subj, :]
+                    y = Y[bs, met, subj, :]
+                    y_pred = w @ x
+                    output[bs, met, subj] = np.corrcoef(y_pred, y)[0, 1]
+        
+        self.pred_results[source]['fit'] = output
+
+    @staticmethod
+    def train_weights(X, Y, model=LinearRegression()):
+        """ Do a five-fold cross validation to train weights for each subj """
+        n_subjs, n_imgs = X.shape
+        stims = np.arange(n_imgs)
+
+        k = 5
+        kf = KFold(n_splits=k, shuffle=True, random_state=42)
+        subj_weight = np.empty((k, n_subjs))
+
+        for fold, (train_index, _) in enumerate(kf.split(stims)):
+            X_train = X[:, train_index].T
+            Y_train = Y[train_index]
+            model.fit(X_train, Y_train)
+            subj_weight[fold] = model.coef_
+
+        subj_weight = np.mean(subj_weight, axis=0)
+        return subj_weight
+        
+
+
+

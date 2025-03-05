@@ -2,10 +2,13 @@
 contains all functions related to prediction analyses
 
 TDL:
-2. edit for cross metric predictions
 3. plot graph
+
+MAYDO: 
+1. consider standardizing the data before fitting models
 '''
 
+from itertools import combinations, permutations
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from pathlib import Path
 import numpy as np
@@ -29,11 +32,16 @@ class PredMap:
         self.graph_path = Path(self.config['graph_path'])
 
         # initialize output
+        met_type = ['within', 'across']
         sources = ['subj', 'inst']
         methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
-        self.pred_results = {source: {method: None for method in methods} 
-                             for source in sources
-                             }
+        self.pred_results = {
+            met: {
+            source: {
+                method: None for method in methods
+            } for source in sources
+            } for met in met_type
+        }
 
     def check_exist(self):
         """ check whether the file exist"""
@@ -58,13 +66,15 @@ class PredMap:
         self.compute_corr_map()
         self.compute_raw_mat()
 
+        met_type = ['within', 'across']
         source_arr = ['subj', 'inst']
-        for source in source_arr:
-            self.pred_from_rand(source)
-            self.pred_from_avg(source)
-            self.pred_from_corr(source)
-            self.pred_from_fit(source)
-        
+        for met in met_type:
+            for source in source_arr:
+                self.pred_from_rand(met, source)
+                self.pred_from_avg(met, source)
+                self.pred_from_corr(met, source)
+                # self.pred_from_fit(met, source)
+
     def compute_corr_map(self):
         """ Load CorrMap object """
         self.corr_map = CorrMap(self.config)
@@ -99,79 +109,113 @@ class PredMap:
         human_split = np.nanmean(human_split, axis = 2)  # average across conditions.
         model_split = np.nanmean(model_split, axis = 2)  # average across conditions.
 
-        self.raw_mat = {
+        self.split_raw_mat = {  # for rand, avg, corr
             'subj': human_split,
             'inst': model_split
         }
+        self.raw_mat = {   # for ensemble fitting
+            'subj': human_arr,
+            'inst': model_arr
+        }
 
-    def pred_from_rand(self, source='subj') -> None:
-        """ Perform prediction analyses from random data """
+    def pred_from_rand(self, within: str, source: str) -> None:
+        """ 
+        Perform prediction analyses from random data 
+        Take a random subject/instance from the same split to predict
+        either within or across metric of the target subject
+        """
 
-        # select only the second split
-        X = self.raw_mat[source][:, 1, :, :, :]
-        Y = self.raw_mat['subj'][:, 1, :, :, :]
+        # select only the second split 
+        X = self.split_raw_mat[source][:, 1, :, :, :]
+        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
 
+        # handle within and across metric prediction
         n_bs, n_met, n_subjs, _ = Y.shape
-        output = np.empty((n_bs, n_met, n_subjs))
+        if within == 'within':
+            met_pairs = [(i, i) for i in range(n_met)]  # this allow shared logic
+            output = np.empty((n_bs, n_met, n_subjs))
+        else:
+            met_pairs = list(permutations(range(n_met), 2))
+            n_met_pairs = len(met_pairs)
+            output = np.empty((n_bs, n_met_pairs, n_subjs))
 
+        # prediction and evaluation loop
         np.random.seed(self.bs_seed)
         for bs in range(n_bs):
-            for met in range(n_met):
+            for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
                     rand_subj = np.random.choice(other_subjs)
-                    x = X[bs, met, rand_subj, :]
-                    y = Y[bs, met, subj, :]
+                    x = X[bs, met_a, rand_subj, :]
+                    y = Y[bs, met_b, subj, :]
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
-        self.pred_results[source]['rand'] = output
+        self.pred_results[within][source]['rand'] = output
 
-    def pred_from_avg(self, source='subj') -> None:
-        """ Perform prediction analyses from average data """
+    def pred_from_avg(self, within : str, source : str) -> None:
+        """ Perform prediction analyses from average data 
+        Take the average of all other subjects/instances to predict
+        """
 
         # select only the second split
-        X = self.raw_mat[source][:, 1, :, :, :]
-        Y = self.raw_mat['subj'][:, 1, :, :, :]
+        X = self.split_raw_mat[source][:, 1, :, :, :]
+        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
 
+        # handle within and across metric prediction
         n_bs, n_met, n_subjs, _ = Y.shape
-        output = np.empty((n_bs, n_met, n_subjs))
+        if within == 'within':
+            met_pairs = [(i, i) for i in range(n_met)] 
+            output = np.empty((n_bs, n_met, n_subjs))
+        else:
+            met_pairs = list(permutations(range(n_met), 2))
+            n_met_pairs = len(met_pairs)
+            output = np.empty((n_bs, n_met_pairs, n_subjs))
 
         for bs in range(n_bs):
-            for met in range(n_met):
+            for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = np.nanmean(X[bs, met, other_subjs, :], axis=0)
-                    y = Y[bs, met, subj, :]
+                    x = np.nanmean(X[bs, met_a, other_subjs, :], axis=0)
+                    y = Y[bs, met_b, subj, :]
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
-        self.pred_results[source]['avg'] = output
+        self.pred_results[within][source]['avg'] = output
 
-    def pred_from_corr(self, source='subj') -> None:
-        """ Perform prediction analyses from CorrMap """
+    def pred_from_corr(self, within : str, source : str) -> None:
+        """ Perform prediction analyses from CorrMap 
+        Use the correlation map as weight to predict the target subject/instance
+        """
 
         # select only the second split for data
-        X = self.raw_mat[source][:, 1, :, :, :]
-        Y = self.raw_mat['subj'][:, 1, :, :, :]
+        X = self.split_raw_mat[source][:, 1, :, :, :]
+        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
         # get weight from corr map first split
         W = self.corr_map[source][:, 0, :, :, :]
 
+        # handle within and across metric prediction
         n_bs, n_met, n_subjs, _ = Y.shape
-        output = np.empty((n_bs, n_met, n_subjs))
+        if within == 'within':
+            met_pairs = [(i, i) for i in range(n_met)] 
+            output = np.empty((n_bs, n_met, n_subjs))
+        else:
+            met_pairs = list(permutations(range(n_met), 2))
+            n_met_pairs = len(met_pairs)
+            output = np.empty((n_bs, n_met_pairs, n_subjs))
 
         for bs in range(n_bs):
-            for met in range(n_met):
+            for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = X[bs, met, other_subjs, :]
-                    w = W[bs, met, subj, :] if source == 'subj' \
-                        else W[bs, met, subj, other_subjs] # arbitarily remove 1 inst to match shape
-                    y = Y[bs, met, subj, :]
+                    x = X[bs, met_a, other_subjs, :]
+                    w = W[bs, met_a, subj, :] if source == 'subj' \
+                        else W[bs, met_a, subj, other_subjs] # arbitarily remove 1 inst to match shape
+                    y = Y[bs, met_b, subj, :]
                     y_pred =  w @ x
                     output[bs, met, subj] = np.corrcoef(y_pred, y)[0, 1]
 
-        self.pred_results[source]['corr'] = output
+        self.pred_results[within][source]['corr'] = output
 
-    def pred_from_fit(self, source='subj') -> None:
+    def pred_from_fit(self, within : str, source : str) -> None:
         """ Perform prediction analyses from fitting """
 
         methods = ['ols', 'lasso', 'ridge']
@@ -193,4 +237,4 @@ class PredMap:
             Y = self.raw_mat['subj'][:, 1, :, :, :]
             pred_acc = pred_func.test_model_for_each(X, Y, W, C, A, model=model)
 
-            self.pred_results[source][method] = pred_acc
+            self.pred_results[within][source][method] = pred_acc

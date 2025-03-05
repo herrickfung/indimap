@@ -127,5 +127,3 @@ def test_model_for_each(X, Y, W, C, A, model) -> np.ndarray:
                 output[bs, met, subj] = np.corrcoef(y_pred, Y[bs, met, subj, :])[0, 1]
 
     return output
-
-

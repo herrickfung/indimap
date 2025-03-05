@@ -28,7 +28,7 @@ def train_weights(X, Y, alpha, model) -> np.ndarray:
     return Intercept, Beta
 
 
-def get_prediction(x, w, c, a, model) -> np.ndarray:
+def get_prediction(model, x, w, c, a) -> np.ndarray:
     """ Do evaluation of the predictivity using the fitted weights """
     model.coef_ = w
     model.intercept_ = c
@@ -60,7 +60,7 @@ def fit_eval_alpha_model(model, X, Y, alpha) -> float:
 
 
 def find_best_alpha(X, Y, model) -> float:
-    """ Get the optimal alpha for Ridge regression """
+    """ Get the optimal alpha for Regularized regression """
     clone_model = sklearn.base.clone(model)
     alphas = [0.001, 0.01, 0.1, 1, 10, 100]
     best_alpha = None
@@ -71,59 +71,61 @@ def find_best_alpha(X, Y, model) -> float:
         if score > best_score:
             best_score = score
             best_alpha = alpha
-
     return best_alpha
 
 
-def train_model_for_each(X, model) -> tuple:
-    """ Train the model for each bs, met, subjs """
+def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray) -> tuple:
+    """ Train the model for each met, subjs """
 
-    n_bs, n_met, n_subjs, _ = X.shape
-    W = np.empty((n_bs, n_met, n_subjs, n_subjs - 1))
-    C = np.empty((n_bs, n_met, n_subjs))
-    A = np.empty((n_bs, n_met, n_subjs))
+    clone_model = sklearn.base.clone(model)
 
-    for bs in range(n_bs):
-        for met in range(n_met):
-            for subj in range(n_subjs):
-                other_subjs = [i for i in range(n_subjs) if i != subj]
-                if isinstance(model, LinearRegression):
-                    best_alpha = None
-                else:
-                    best_alpha = find_best_alpha(
-                        X[bs, met, other_subjs, :],
-                        X[bs, met, subj, :],
-                        model=model,
-                    )
-                C[bs, met, subj], W[bs, met, subj] = \
-                    train_weights(
-                        X[bs, met, other_subjs, :], 
-                        X[bs, met, subj, :],
-                        best_alpha,
-                        model=model,
-                    )
-                A[bs, met, subj] = best_alpha
+    n_met, n_subjs, n_imgs = X_train.shape
+    W = np.empty((n_met, n_subjs, n_subjs - 1))
+    C = np.empty((n_met, n_subjs))
+    A = np.empty((n_met, n_subjs))
+
+    for met in range(n_met):
+        for subj in range(n_subjs):
+            other_subjs = [i for i in range(n_subjs) if i != subj]
+            if isinstance(clone_model, LinearRegression):
+                best_alpha = None
+            else:
+                best_alpha = find_best_alpha(
+                    X = X_train[met, other_subjs, :],
+                    Y = Y_train[met, subj, :],
+                    model = clone_model,
+                )
+
+            C[met, subj], W[met, subj] = \
+                train_weights(
+                    X = X_train[met, other_subjs, :], 
+                    Y = Y_train[met, subj, :],
+                    alpha = best_alpha,
+                    model = clone_model,
+                )
+            A[met, subj] = best_alpha
 
     return W, C, A
 
 
-def test_model_for_each(X, Y, W, C, A, model) -> np.ndarray:
-    """ Test the model for each bs, met, subjs """
+def test_model_for_each(model, X_test: np.ndarray, Y_test: np.ndarray,
+                        W: np.ndarray, C: np.ndarray, A: np.ndarray,
+                        ) -> np.ndarray:
+    """ Test the model for each met, subjs """
 
-    n_bs, n_met, n_subjs, _ = Y.shape
-    output = np.empty((n_bs, n_met, n_subjs))
+    n_met, n_subjs, _ = Y_test.shape
+    output = np.empty((n_met, n_subjs))
 
-    for bs in range(n_bs):
-        for met in range(n_met):
-            for subj in range(n_subjs):
-                other_subjs = [i for i in range(n_subjs) if i != subj]
-                y_pred = get_prediction(
-                    X[bs, met, other_subjs, :],
-                    W[bs, met, subj],
-                    C[bs, met, subj],
-                    A[bs, met, subj],
-                    model=model,
-                )
-                output[bs, met, subj] = np.corrcoef(y_pred, Y[bs, met, subj, :])[0, 1]
+    for met in range(n_met):
+        for subj in range(n_subjs):
+            other_subjs = [i for i in range(n_subjs) if i != subj]
+            y_pred = get_prediction(
+                model=model,
+                x = X_test[met, other_subjs, :],
+                w = W[met, subj],
+                c = C[met, subj],
+                a = A[met, subj],
+            )
+            output[met, subj] = np.corrcoef(y_pred, Y_test[met, subj, :])[0, 1]
 
     return output

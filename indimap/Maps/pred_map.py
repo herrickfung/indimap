@@ -8,7 +8,8 @@ MAYDO:
 1. consider standardizing the data before fitting models
 '''
 
-from itertools import combinations, permutations
+from itertools import permutations
+from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from pathlib import Path
 import numpy as np
@@ -66,14 +67,16 @@ class PredMap:
         self.compute_corr_map()
         self.compute_raw_mat()
 
-        met_type = ['within', 'across']
-        source_arr = ['subj', 'inst']
-        for met in met_type:
-            for source in source_arr:
-                self.pred_from_rand(met, source)
-                self.pred_from_avg(met, source)
-                self.pred_from_corr(met, source)
-                # self.pred_from_fit(met, source)
+        self.pred_from_fit('within', 'subj')
+
+        # met_type = ['within', 'across']
+        # source_arr = ['subj', 'inst']
+        # for met in met_type:
+        #     for source in source_arr:
+        #         self.pred_from_rand(met, source)
+        #         self.pred_from_avg(met, source)
+        #         self.pred_from_corr(met, source)
+        #         # self.pred_from_fit(met, source)
 
     def compute_corr_map(self):
         """ Load CorrMap object """
@@ -229,12 +232,41 @@ class PredMap:
             elif method == 'ridge':
                 model = Ridge()
 
-            X = self.raw_mat[source][:, 0, :, :, :]
-            W, C, A = pred_func.train_model_for_each(X, model=model)
+            # ------------------------------------------------------------------
+            # TDL:
+            # look for convergence error
+            # apply to cross metric training and evaluation
+            # ------------------------------------------------------------------
 
-            # test on second split and get prediction
-            X = self.raw_mat[source][:, 1, :, :, :]
-            Y = self.raw_mat['subj'][:, 1, :, :, :]
-            pred_acc = pred_func.test_model_for_each(X, Y, W, C, A, model=model)
+            # shape = (2, 3, 60, 240) -> (cond, met, subj imgs)
+            X = np.concatenate(self.raw_mat[source], axis=-1)
+            Y = np.concatenate(self.raw_mat['subj'], axis=-1)
+            n_met, n_subjs, n_imgs = X.shape
+
+            # init k fold
+            k = 5
+            kf = KFold(n_splits=k, shuffle=True, random_state=42)
+            stims = np.arange(n_imgs)
+
+            for fold, (train_idx, test_idx) in enumerate(kf.split(stims)):
+                # training
+                x_train = X[:, :, train_idx]; y_train = Y[:, :, train_idx]
+                W, C, A = pred_func.train_model_for_each(
+                    model=model, 
+                    X_train=x_train, 
+                    Y_train=y_train
+                )
+
+                # testing
+                x_test = X[:, :, test_idx]; y_test = Y[:, :, test_idx]
+                pred_acc = pred_func.test_model_for_each(
+                    model=model,
+                    X_test=x_test,
+                    Y_test=y_test,
+                    W=W,
+                    C=C,
+                    A=A,
+                )
 
             self.pred_results[within][source][method] = pred_acc
+            exit()

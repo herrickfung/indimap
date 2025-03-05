@@ -1,7 +1,13 @@
 import numpy as np
 import sklearn
+from itertools import permutations
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression
+
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 def train_weights(X, Y, alpha, model) -> np.ndarray:
     """ Do a five-fold cross validation to train weights for each subj """
@@ -74,32 +80,43 @@ def find_best_alpha(X, Y, model) -> float:
     return best_alpha
 
 
-def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray) -> tuple:
+def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray,
+                         within: str,
+                         ) -> tuple:
     """ Train the model for each met, subjs """
 
     clone_model = sklearn.base.clone(model)
 
+    # handle within and across metric prediction
     n_met, n_subjs, n_imgs = X_train.shape
-    W = np.empty((n_met, n_subjs, n_subjs - 1))
-    C = np.empty((n_met, n_subjs))
-    A = np.empty((n_met, n_subjs))
+    if within == 'within':
+        met_pairs = [(i, i) for i in range(n_met)]
+    else:
+        met_pairs = list(permutations(range(n_met), 2))
+    n_met_pairs = len(met_pairs)
 
-    for met in range(n_met):
+    # init weights, intercepts, alphas
+    W = np.empty((n_met_pairs, n_subjs, n_subjs - 1))
+    C = np.empty((n_met_pairs, n_subjs))
+    A = np.empty((n_met_pairs, n_subjs))
+
+    # loop through and train for each met and subj
+    for met, (met_a, met_b) in enumerate(met_pairs):
         for subj in range(n_subjs):
             other_subjs = [i for i in range(n_subjs) if i != subj]
             if isinstance(clone_model, LinearRegression):
                 best_alpha = None
             else:
                 best_alpha = find_best_alpha(
-                    X = X_train[met, other_subjs, :],
-                    Y = Y_train[met, subj, :],
+                    X = X_train[met_a, other_subjs, :],
+                    Y = Y_train[met_b, subj, :],
                     model = clone_model,
                 )
 
             C[met, subj], W[met, subj] = \
                 train_weights(
-                    X = X_train[met, other_subjs, :], 
-                    Y = Y_train[met, subj, :],
+                    X = X_train[met_a, other_subjs, :], 
+                    Y = Y_train[met_b, subj, :],
                     alpha = best_alpha,
                     model = clone_model,
                 )
@@ -110,22 +127,30 @@ def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray) -> tup
 
 def test_model_for_each(model, X_test: np.ndarray, Y_test: np.ndarray,
                         W: np.ndarray, C: np.ndarray, A: np.ndarray,
+                        within: str
                         ) -> np.ndarray:
     """ Test the model for each met, subjs """
 
+    # handle within and across metric prediction
     n_met, n_subjs, _ = Y_test.shape
-    output = np.empty((n_met, n_subjs))
+    if within == 'within':
+        met_pairs = [(i, i) for i in range(n_met)]
+    else:
+        met_pairs = list(permutations(range(n_met), 2))
+    n_met_pairs = len(met_pairs)
+    output = np.empty((n_met_pairs, n_subjs))
 
-    for met in range(n_met):
+    # loop through and test for each met and subj
+    for met, (met_a, met_b) in enumerate(met_pairs):
         for subj in range(n_subjs):
             other_subjs = [i for i in range(n_subjs) if i != subj]
             y_pred = get_prediction(
                 model=model,
-                x = X_test[met, other_subjs, :],
+                x = X_test[met_a, other_subjs, :],
                 w = W[met, subj],
                 c = C[met, subj],
                 a = A[met, subj],
             )
-            output[met, subj] = np.corrcoef(y_pred, Y_test[met, subj, :])[0, 1]
+            output[met, subj] = np.corrcoef(y_pred, Y_test[met_b, subj, :])[0, 1]
 
     return output

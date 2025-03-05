@@ -2,20 +2,27 @@
 contains all functions related to prediction analyses
 
 TDL:
-3. plot graph
+1. plot graph
 
 MAYDO: 
-1. consider standardizing the data before fitting models
+1. consider standardizing the data before fitting models 
+(May solve convergence issues)
 '''
 
 from itertools import permutations
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from pathlib import Path
 import numpy as np
 
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
 from .corr_map import CorrMap
 from .util import map_func, pred_func
+
 
 class PredMap:
     def __init__(self, config):
@@ -67,16 +74,15 @@ class PredMap:
         self.compute_corr_map()
         self.compute_raw_mat()
 
-        self.pred_from_fit('within', 'subj')
-
-        # met_type = ['within', 'across']
-        # source_arr = ['subj', 'inst']
-        # for met in met_type:
-        #     for source in source_arr:
-        #         self.pred_from_rand(met, source)
-        #         self.pred_from_avg(met, source)
-        #         self.pred_from_corr(met, source)
-        #         # self.pred_from_fit(met, source)
+        # loop to run all analyses
+        met_type = ['within', 'across']
+        source_arr = ['subj', 'inst']
+        for met in met_type:
+            for source in source_arr:
+                self.pred_from_rand(met, source)
+                self.pred_from_avg(met, source)
+                self.pred_from_corr(met, source)
+                self.pred_from_fit(met, source)
 
     def compute_corr_map(self):
         """ Load CorrMap object """
@@ -222,31 +228,30 @@ class PredMap:
         """ Perform prediction analyses from fitting """
 
         methods = ['ols', 'lasso', 'ridge']
-
         for method in methods:
-            # init, train on first split
             if method == 'ols':
                 model = LinearRegression()
             elif method == 'lasso':
-                model = Lasso()
+                model = Lasso(max_iter=1000)
             elif method == 'ridge':
-                model = Ridge()
+                model = Ridge(max_iter=1000)
 
-            # ------------------------------------------------------------------
-            # TDL:
-            # look for convergence error
-            # apply to cross metric training and evaluation
-            # ------------------------------------------------------------------
-
-            # shape = (2, 3, 60, 240) -> (cond, met, subj imgs)
+            # (cond, met, subj imgs) -> (met, subj, imgs)
             X = np.concatenate(self.raw_mat[source], axis=-1)
             Y = np.concatenate(self.raw_mat['subj'], axis=-1)
-            n_met, n_subjs, n_imgs = X.shape
 
-            # init k fold
+            n_met, n_subjs, n_imgs = X.shape
+            if within == 'within':
+                met_pairs = [(i, i) for i in range(n_met)]
+            else:
+                met_pairs = list(permutations(range(n_met), 2))
+            n_met_pairs = len(met_pairs)
+
+            # init k fold and results
             k = 5
             kf = KFold(n_splits=k, shuffle=True, random_state=42)
             stims = np.arange(n_imgs)
+            pred_acc_arr = np.empty((k, n_met_pairs, n_subjs))
 
             for fold, (train_idx, test_idx) in enumerate(kf.split(stims)):
                 # training
@@ -254,7 +259,8 @@ class PredMap:
                 W, C, A = pred_func.train_model_for_each(
                     model=model, 
                     X_train=x_train, 
-                    Y_train=y_train
+                    Y_train=y_train,
+                    within = within,
                 )
 
                 # testing
@@ -266,7 +272,10 @@ class PredMap:
                     W=W,
                     C=C,
                     A=A,
+                    within = within,
                 )
+                pred_acc_arr[fold] = pred_acc
 
-            self.pred_results[within][source][method] = pred_acc
-            exit()
+            # average across folds and write results
+            output = np.nanmean(pred_acc_arr, axis=0)
+            self.pred_results[within][source][method] = output

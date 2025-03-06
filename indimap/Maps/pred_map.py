@@ -1,20 +1,22 @@
 '''
 contains all functions related to prediction analyses
 
-TDL:
-1. plot graph
-
 MAYDO: 
 1. consider standardizing the data before fitting models 
 (May solve convergence issues)
 '''
 
+from einops import rearrange
+from matplotlib import pyplot as plt
+from matplotlib import rcParams
 from itertools import permutations
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from scipy.stats import sem
 from pathlib import Path
 import numpy as np
+rcParams['font.family'] = 'CMU Sans Serif'
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -58,9 +60,11 @@ class PredMap:
 
     def load_all(self, path):
         """ load all the results from the file"""
-        self.pred_results = np.load(path / 'PredMap_results.npz', 
-                                    allow_pickle=True
-                                    )
+        loaded= np.load(path / 'PredMap_results.npz', 
+                        allow_pickle=True
+                        )
+        self.pred_results['within'] = loaded['within'].item()
+        self.pred_results['across'] = loaded['across'].item()
 
     def save_all(self, path):
         """ save all the results to the file"""
@@ -279,3 +283,71 @@ class PredMap:
             # average across folds and write results
             output = np.nanmean(pred_acc_arr, axis=0)
             self.pred_results[within][source][method] = output
+
+    def plot_wn_var(self):
+        """ plot results for within metric prediction """
+
+        # init
+        data = self.pred_results['within']
+        sources = ['subj', 'inst']
+        methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
+        n_sources = len(sources)
+        n_methods = len(methods)
+        n_bs, n_met, n_subjs = data['subj']['rand'].shape
+
+        # setup plot data
+        trans_data = np.empty((n_sources, n_methods, n_met, n_subjs))
+        for i, sor in enumerate(sources):
+            for j, met in enumerate(methods):
+                sub_data = data[sor][met]
+                if met in ['rand', 'avg', 'corr']:
+                    sub_data = np.nanmean(sub_data, axis=0)  # average across bs
+                    trans_data[i, j] = sub_data
+        trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
+
+        # plot
+        plt.clf()
+        fig, axs = plt.subplots(1, n_met, figsize=(12, 8))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        labels = ['Predict from Subject', 'Predict from Instance']
+        method_labels = ['Random one', 'Average', 'Correlation', 
+                         'OLS', 'L1 Lasso', 'L2 Ridge'
+                         ]
+
+        for i, met in enumerate(self.map_var):
+            ax = axs[i]
+            for j, sor in enumerate(sources):
+                for k, method in enumerate(methods):
+                    x_pos = j * 0.8 + k * 5
+                    ax.bar(x_pos,
+                           np.nanmean(trans_data[i,j,k,:], axis = 0),
+                           yerr = sem(trans_data[i, j, k, :], axis = 0),
+                           color = colors(j),
+                           alpha = 0.5,
+                           label = labels[j] if k == 0 else None,
+                           )
+                    ax.scatter([x_pos - 0.25 for _ in range(n_subjs)],
+                               trans_data[i,j,k,:],
+                               color = colors(j),
+                               s = 5,
+                            )
+
+            ax.set_ylim(-1,1)
+            ax.set_title(met, fontsize=14)
+            ax.set_xticks([k * 5 for k in range(n_methods)], 
+                          method_labels, 
+                          fontsize=14,
+                          )
+            ax.set_xlabel('Prediction Methods', fontsize=16, fontweight='bold')
+            ax.set_ylabel('r', fontsize=16, fontweight='bold')
+            ax.legend()
+
+        plt.suptitle('Within metric prediction', fontsize=18, fontweight='bold')
+        plt.tight_layout()
+        fig_path = self.graph_path / 'PredWithinVar.png'
+        plt.savefig(fig_path, dpi=384)
+        plt.close()
+        print(fig_path)
+
+    def plot_btw_var(self):
+        pass

@@ -212,6 +212,11 @@ Graph path:                     {self.graph_path}
         """ Plot dims map """
         self.dims_map.plot_mds()
         self.dims_map.plot_pca_explained_var()
+    
+    def plot_pred(self):
+        """ Plot prediction results """
+        self.pred_map.plot_wn_var()
+        self.pred_map.plot_btw_var()
 
     def plot_all(self):
         """ Plot all results """
@@ -220,6 +225,7 @@ Graph path:                     {self.graph_path}
             ('RankMap', self.plot_rank),
             ('TopMap', self.plot_top),
             ('DimsMap', self.plot_dims),
+            ('PredMap', self.plot_pred),
         ]
         for name, func in tasks:
             print(f"Plotting {name}")

@@ -154,7 +154,7 @@ class CorrMap:
             for j in range(n_metrics):
                 x_pos = j * 3 + i * 0.8
                 plt.bar(x_pos, 
-                        self.corr_maps[map_type][:,:,j,:,:].nanmean(),
+                        np.nanmean(self.corr_maps[map_type][:,:,j,:,:], axis = (0,1,2,3)),
                         yerr = sem(self.corr_maps[map_type][:,:,j,:,:], axis = (0,1,2,3)),
                         color = colors(i), alpha = 0.5, label = map_labels[i] if j == 0 else None
                         )
@@ -186,7 +186,7 @@ class CorrMap:
         result_type = ['subj_btw_split', 'subj_gp_btw_split']
         for i, map in enumerate(map_type):
             for j, result in enumerate(result_type):
-                trans_data[:, i, j, :] = self.corr_results[map][result].mean(axis = 0)
+                trans_data[:, i, j, :] = np.mean(self.corr_results[map][result], axis = 0)   
 
         # plot here
         plt.clf()
@@ -203,7 +203,7 @@ class CorrMap:
                     x_pos = i * 10 + j * 2.5 + k * 0.8
 
                     plt.bar(x_pos,
-                            trans_data[i,j,k,:].mean(axis = 0),
+                            np.mean(trans_data[i,j,k,:], axis = 0),
                             yerr = sem(trans_data[i,j,k,:], axis = 0),
                             color = colors(j * 2 + k),
                             alpha = 0.5,
@@ -245,7 +245,7 @@ class CorrMap:
         result_type = ['subj_btw_var', 'subj_gp_btw_var']
         for i, map in enumerate(map_type):
             for j, result in enumerate(result_type):
-                trans_data[:, i, j, :] = self.corr_results[map][result].mean(axis = 0)
+                trans_data[:, i, j, :] = np.mean(self.corr_results[map][result], axis = 0)
 
         # plot here
         plt.clf()
@@ -263,7 +263,7 @@ class CorrMap:
                     x_pos = i * 10 + j * 2.5 + k * 0.8
 
                     plt.bar(x_pos,
-                            trans_data[i,j,k,:].mean(axis = 0),
+                            np.mean(trans_data[i,j,k,:], axis = 0),
                             yerr = sem(trans_data[i,j,k,:], axis = 0),
                             color = colors(j * 2 + k),
                             alpha = 0.5,

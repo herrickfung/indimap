@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 rcParams['font.family'] = 'CMU Sans Serif'
 
+plt.set_loglevel('error')
+
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -302,26 +304,28 @@ class PredMap:
                 sub_data = data[sor][met]
                 if met in ['rand', 'avg', 'corr']:
                     sub_data = np.nanmean(sub_data, axis=0)  # average across bs
-                    trans_data[i, j] = sub_data
+                else:
+                    if np.any((sub_data < -1) | (sub_data > 1)):
+                        assert not np.any((sub_data < -1) | (sub_data > 1)), \
+                            f"Warning: Data points out of range [-1, 1] in {sor} {met}"
+                trans_data[i, j] = sub_data
         trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
 
         # plot
         plt.clf()
-        fig, axs = plt.subplots(1, n_met, figsize=(12, 8))
+        fig, axs = plt.subplots(1, n_met, figsize=(10, 4))
         colors = plt.cm.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
-        method_labels = ['Random one', 'Average', 'Correlation', 
-                         'OLS', 'L1 Lasso', 'L2 Ridge'
-                         ]
+        method_labels = ['Rand', 'Avg', 'Corr', 'OLS', 'L1', 'L2']
 
         for i, met in enumerate(self.map_var):
             ax = axs[i]
             for j, sor in enumerate(sources):
                 for k, method in enumerate(methods):
-                    x_pos = j * 0.8 + k * 5
+                    x_pos = j * 0.8 + k * 3
                     ax.bar(x_pos,
-                           np.nanmean(trans_data[i,j,k,:], axis = 0),
-                           yerr = sem(trans_data[i, j, k, :], axis = 0),
+                           np.mean(trans_data[i,j,k,:]),
+                           yerr = sem(trans_data[i,j,k,:]),
                            color = colors(j),
                            alpha = 0.5,
                            label = labels[j] if k == 0 else None,
@@ -332,17 +336,17 @@ class PredMap:
                                s = 5,
                             )
 
-            ax.set_ylim(-1,1)
+            ax.set_ylim(-0.1, 1)
             ax.set_title(met, fontsize=14)
-            ax.set_xticks([k * 5 for k in range(n_methods)], 
+            ax.set_xticks([k * 3 + 0.4 for k in range(n_methods)], 
                           method_labels, 
-                          fontsize=14,
+                          fontsize=12,
                           )
-            ax.set_xlabel('Prediction Methods', fontsize=16, fontweight='bold')
-            ax.set_ylabel('r', fontsize=16, fontweight='bold')
-            ax.legend()
+            ax.set_xlabel('Prediction Methods', fontsize=14, fontweight='bold')
+            ax.set_ylabel('r', fontsize=14, fontweight='bold')
+            ax.legend(loc='upper left', fontsize=10)
 
-        plt.suptitle('Within metric prediction', fontsize=18, fontweight='bold')
+        plt.suptitle('Within metric prediction', fontsize=16, fontweight='bold')
         plt.tight_layout()
         fig_path = self.graph_path / 'PredWithinVar.png'
         plt.savefig(fig_path, dpi=384)

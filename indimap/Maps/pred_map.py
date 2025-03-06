@@ -304,16 +304,12 @@ class PredMap:
                 sub_data = data[sor][met]
                 if met in ['rand', 'avg', 'corr']:
                     sub_data = np.nanmean(sub_data, axis=0)  # average across bs
-                else:
-                    if np.any((sub_data < -1) | (sub_data > 1)):
-                        assert not np.any((sub_data < -1) | (sub_data > 1)), \
-                            f"Warning: Data points out of range [-1, 1] in {sor} {met}"
                 trans_data[i, j] = sub_data
         trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
 
         # plot
         plt.clf()
-        fig, axs = plt.subplots(1, n_met, figsize=(10, 4))
+        fig, axs = plt.subplots(1, n_met, figsize=(n_met * 10/3, 4))
         colors = plt.cm.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
         method_labels = ['Rand', 'Avg', 'Corr', 'OLS', 'L1', 'L2']
@@ -348,10 +344,76 @@ class PredMap:
 
         plt.suptitle('Within metric prediction', fontsize=16, fontweight='bold')
         plt.tight_layout()
-        fig_path = self.graph_path / 'PredWithinVar.png'
+        fig_path = self.graph_path / 'PredWithinMetrics.png'
         plt.savefig(fig_path, dpi=384)
         plt.close()
         print(fig_path)
 
     def plot_btw_var(self):
-        pass
+        """ plot results for between metric prediction """
+
+        # init
+        data = self.pred_results['across']
+        sources = ['subj', 'inst']
+        methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
+        n_sources = len(sources)
+        n_methods = len(methods)
+        n_bs, n_met_pairs, n_subjs = data['subj']['rand'].shape
+
+        # setup plot data
+        trans_data = np.empty((n_sources, n_methods, n_met_pairs, n_subjs))
+        for i, sor in enumerate(sources):
+            for j, met in enumerate(methods):
+                sub_data = data[sor][met]
+                if met in ['rand', 'avg', 'corr']:
+                    sub_data = np.nanmean(sub_data, axis=0)  # average across bs
+                trans_data[i, j] = sub_data
+        trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
+        trans_data = np.abs(trans_data)
+
+        # plot
+        plt.clf()
+        fig, axs = plt.subplots(n_met_pairs // 2, 2, figsize=(6.666, 4 * (n_met_pairs // 2)))
+        axs = axs.flatten()
+        colors = plt.cm.get_cmap('Dark2', 8)
+        labels = ['Predict from Subject', 'Predict from Instance']
+        method_labels = ['Rand', 'Avg', 'Corr', 'OLS', 'L1', 'L2']
+
+        met_pairs = list(permutations(self.map_var, 2))
+        for i, (met_a, met_b) in enumerate(met_pairs):
+            ax = axs[i]
+            for j, sor in enumerate(sources):
+                for k, method in enumerate(methods):
+                    x_pos = j * 0.8 + k * 3
+                    ax.bar(x_pos,
+                           np.mean(trans_data[i,j,k,:]),
+                           yerr = sem(trans_data[i,j,k,:]),
+                           color = colors(j),
+                           alpha = 0.5,
+                           label = labels[j] if k == 0 else None,
+                           )
+                    ax.scatter([x_pos - 0.25 for _ in range(n_subjs)],
+                               trans_data[i,j,k,:],
+                               color = colors(j),
+                               s = 5,
+                              )
+
+            ax.set_ylim(-0.1, 1)
+            ax.set_title(f"predict {met_b} by {met_a}", fontsize=14)
+            ax.set_xticks([k * 3 + 0.4 for k in range(n_methods)], 
+                          method_labels, 
+                          fontsize=12,
+                          )
+            ax.set_xlabel('Prediction Methods', fontsize=14, fontweight='bold')
+            ax.set_ylabel('r', fontsize=14, fontweight='bold')
+            ax.legend(loc='upper left', fontsize=10)
+
+        plt.suptitle('Between metric prediction', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        fig_path = self.graph_path / 'PredBtwMetrics.png'
+        plt.savefig(fig_path, dpi=384)
+        plt.close()
+        print(fig_path)
+
+
+

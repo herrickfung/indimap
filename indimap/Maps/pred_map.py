@@ -399,7 +399,7 @@ class PredMap:
                               )
 
             ax.set_ylim(-0.1, 1)
-            ax.set_title(f"predict {met_b} by {met_a}", fontsize=14)
+            ax.set_title(f"{met_a} predict {met_b}", fontsize=14)
             ax.set_xticks([k * 3 + 0.4 for k in range(n_methods)], 
                           method_labels, 
                           fontsize=12,

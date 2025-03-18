@@ -297,8 +297,8 @@ class PredMap:
         for i, sor in enumerate(sources):
             for j, met in enumerate(methods):
                 sub_data = data[sor][met]
-                if met in ['rand', 'avg', 'corr']:
-                    sub_data = np.nanmean(sub_data, axis=0)  # average across bs
+                # average across bs for first 3 method, average across condition for other
+                sub_data = np.nanmean(sub_data, axis=0)  
                 trans_data[i, j] = sub_data
         trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
 
@@ -360,8 +360,8 @@ class PredMap:
         for i, sor in enumerate(sources):
             for j, met in enumerate(methods):
                 sub_data = data[sor][met]
-                if met in ['rand', 'avg', 'corr']:
-                    sub_data = np.nanmean(sub_data, axis=0)  # average across bs
+                # average across bs / average across condition
+                sub_data = np.nanmean(sub_data, axis=0)  
                 trans_data[i, j] = sub_data
         trans_data = rearrange(trans_data, 's m met subj -> met s m subj')
         trans_data = np.abs(trans_data)

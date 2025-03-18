@@ -1,4 +1,4 @@
-# Tutorial: Using IndiMap for Analyzing and Mapping Individual Differences
+# Tutorial: Using IndiMap for analyzing and mapping individual differences
 
 This tutorial will guide you through the process of using the `IndiMap` library to analyzing and mapping individual differences in human behavior to convolutional neural networks in perceptual decision-making tasks.
 

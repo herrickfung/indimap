@@ -1,9 +1,5 @@
 '''
 contains all functions related to prediction analyses
-
-MAYDO: 
-1. consider standardizing the data before fitting models 
-(May solve convergence issues)
 '''
 
 from einops import rearrange
@@ -76,7 +72,7 @@ class PredMap:
     def compute_pred_maps(self):
         """ Perform prediction analyses """
 
-        # setup
+        # # setup
         self.compute_corr_map()
         self.compute_raw_mat()
 
@@ -242,11 +238,10 @@ class PredMap:
             elif method == 'ridge':
                 model = Ridge(max_iter=1000)
 
-            # (cond, met, subj imgs) -> (met, subj, imgs)
-            X = np.concatenate(self.raw_mat[source], axis=-1)
-            Y = np.concatenate(self.raw_mat['subj'], axis=-1)
+            X = self.raw_mat[source]
+            Y = self.raw_mat['subj']
 
-            n_met, n_subjs, n_imgs = X.shape
+            n_conds, n_met, n_subjs, n_imgs = X.shape
             if within == 'within':
                 met_pairs = [(i, i) for i in range(n_met)]
             else:
@@ -257,11 +252,11 @@ class PredMap:
             k = 5
             kf = KFold(n_splits=k, shuffle=True, random_state=42)
             stims = np.arange(n_imgs)
-            pred_acc_arr = np.empty((k, n_met_pairs, n_subjs))
+            pred_acc_arr = np.empty((k, n_conds, n_met_pairs, n_subjs))
 
             for fold, (train_idx, test_idx) in enumerate(kf.split(stims)):
                 # training
-                x_train = X[:, :, train_idx]; y_train = Y[:, :, train_idx]
+                x_train = X[:, :, :, train_idx]; y_train = Y[:, :, :, train_idx]
                 W, C, A = pred_func.train_model_for_each(
                     model=model, 
                     X_train=x_train, 
@@ -270,7 +265,7 @@ class PredMap:
                 )
 
                 # testing
-                x_test = X[:, :, test_idx]; y_test = Y[:, :, test_idx]
+                x_test = X[:, :, :, test_idx]; y_test = Y[:, :, :, test_idx]
                 pred_acc = pred_func.test_model_for_each(
                     model=model,
                     X_test=x_test,
@@ -283,7 +278,7 @@ class PredMap:
                 pred_acc_arr[fold] = pred_acc
 
             # average across folds and write results
-            output = np.nanmean(pred_acc_arr, axis=0)
+            output = np.nanmean(pred_acc_arr, axis=0)  # n_conds, n_met_pars, n_subjs
             self.pred_results[within][source][method] = output
 
     def plot_wn_var(self):

@@ -44,12 +44,13 @@ This tutorial will guide you through the process of using the `IndiMap` library 
     ```python
     mnist_rtnet.compute_all(load_exists=False)
     ```
-    If you wish to compute specific analysis, replace _all with _cor, _rank, _top, _dims depending on your needs:
+    If you wish to compute specific analysis, replace _all with _corr, _rank, _top, _dims, _pred depending on your needs:
     ```python
     mnist_rtnet.compute_corr(load_exists=False)
     mnist_rtnet.compute_rank(load_exists=False)
     mnist_rtnet.compute_top(load_exists=False)
     mnist_rtnet.compute_dims(load_exists=False)
+    mnist_rtnet.compute_pred(load_exists=False)
     ```
 
 
@@ -57,12 +58,13 @@ This tutorial will guide you through the process of using the `IndiMap` library 
     ```python
     mnist_rtnet.plot_all()
     ```
-    If you wish to plot specific analysis or if you did not compute all analysis, replace _all with _cor, _rank, _top, _dims depending on your needs:
+    If you wish to plot specific analysis or if you did not compute all analysis, replace _all with _corr, _rank, _top, _dims, _pred depending on your needs:
     ```python
     mnist_rtnet.plot_corr()
     mnist_rtnet.plot_rank()
     mnist_rtnet.plot_top()
     mnist_rtnet.plot_dims()
+    mnist_rtnet.plot_pred()
     ```
 
 ## Explanation
@@ -84,5 +86,5 @@ This tutorial will guide you through the process of using the `IndiMap` library 
     - `graph_path`: Path to save the plots.
 
 - **Methods:**
-    - `compute_all(load_exists=False)`: Computes all necessary mappings. Running this function may take a while (in general less than 5 minutes). If you wish to compute specific maps exclusively, replace _all with _corr, _rank, _top, _dims depending on your needs. Set `load_exists` to `True` if you want to load existing results.
-    - `plot_all()`: Generates and saves all plots. If you wish to plot specific map exclusively, replace _all with _cor, _rank, _top, _dims depending on your needs.
+    - `compute_all(load_exists=False)`: Computes all necessary mappings. Running this function may take a while (in general less than 15 minutes). If you wish to compute specific maps exclusively, replace _all with _corr, _rank, _top, _dims, _pred depending on your needs. Set `load_exists` to `True` if you want to load existing results.
+    - `plot_all()`: Generates and saves all plots. If you wish to plot specific map exclusively, replace _all with _cor, _rank, _top, _dims, _pred depending on your needs.

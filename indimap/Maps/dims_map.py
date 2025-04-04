@@ -86,14 +86,14 @@ class DimsMap:
             "centered" : {
                 "human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed, center=True),
                 "model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed, center=True),
-                "S_human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed, center=True, shuffle=True),
-                "S_model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed, center=True, shuffle=True),
+                # "S_human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed, center=True, shuffle=True),
+                # "S_model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed, center=True, shuffle=True),
             },
             "uncentered": {
                 "human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed),
                 "model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed),
-                "S_human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed, shuffle=True),
-                "S_model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed, shuffle=True),
+                # "S_human": self.fit_pca(self.human_arr, self.n_comps, self.bs_seed, shuffle=True),
+                # "S_model": self.fit_pca(self.model_arr, self.n_comps, self.bs_seed, shuffle=True),
             }
         }
 
@@ -250,11 +250,9 @@ class DimsMap:
     def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:
         """Function to fit PCA and return scaler and pca objects"""
 
-        # center and shuffle if needed
+        # center if needed
         if center:
             arr = map_func.center_to_zero(arr)
-        if shuffle:
-            arr = map_func.shuffle_image_order(arr)
 
         # initiate objects
         scaler_objs = {}
@@ -270,8 +268,8 @@ class DimsMap:
                 scaled_arr[i,j] = scaler.fit_transform(arr[i,j])
                 pca.fit(scaled_arr[i,j])
 
-                scaler_objs[(i,j)] = scaler
-                pca_objs[(i,j)] = pca
+                scaler_objs[i,j] = scaler
+                pca_objs[i,j] = pca
 
         # return objects
         return {
@@ -338,7 +336,7 @@ class DimsMap:
         Function to project data onto PCA components
         -----------------------------------------------------------------------
         Return:
-        results: np.array (size: n_conds x n_mets x n_comps x n_subjs)
+        results: np.array (size: n_shuffle x n_conds x n_mets x n_comps x n_subjs)
             projection results
 
         """
@@ -346,18 +344,26 @@ class DimsMap:
         # center and shuffle if needed
         if center:
             data = map_func.center_to_zero(data)
+
         if shuffle:
+            data = np.tile(data, (1000, 1, 1, 1, 1))
             data = map_func.shuffle_image_order(data)
+        else:
+            data = np.expand_dims(data, axis=0)
 
         # initate results
-        n_conds = data.shape[0]
-        n_mets = data.shape[1]
+        n_suffs = data.shape[0]
+        n_conds = data.shape[1]
+        n_mets = data.shape[2]
         n_comps = pca[(0,0)].components_.shape[0]
-        n_subjs = data.shape[2]
-        results = np.empty((n_conds, n_mets, n_comps, n_subjs))
+        n_subjs = data.shape[3]
+        results = np.empty((n_suffs, n_conds, n_mets, n_comps, n_subjs))
 
         # project
-        for i in range(n_conds):
-            for j in range(n_mets):
-                results[i,j] = pca[(i,j)].components_ @ scaler[(i,j)].transform(data[i,j,:,:]).T
+        for i in range(n_suffs):
+            for j in range(n_conds):
+                for k in range(n_mets):
+                    results[i,j,k] = \
+                        pca[(j,k)].components_ @\
+                        scaler[(j,k)].transform(data[i,j,k,:,:]).T
         return results

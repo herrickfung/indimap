@@ -254,7 +254,13 @@ def shuffle_image_order(arr, seed=42) -> np.ndarray:
 
     np.random.seed(seed)
     shuf_arr = np.copy(arr)
-    shuf_arr = shuf_arr[..., np.random.permutation(shuf_arr.shape[-1])]
+    it = np.nditer(shuf_arr[..., 0], flags=['multi_index'])
+    while not it.finished:
+        idx = it.multi_index
+        last_dims = shuf_arr.shape[-1]
+        perm = np.random.permutation(last_dims)
+        shuf_arr[idx + (slice(None),)] = shuf_arr[idx + (perm,)]
+        it.iternext()
     return shuf_arr
 
 

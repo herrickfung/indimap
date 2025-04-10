@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 from .corr_map import CorrMap
-from .util import map_func, pred_func
+from indimap.util import map_func, pred_func
 
 
 class PredMap:

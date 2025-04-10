@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["indimap"]
+where = ["src"]
 
 [project]
 name = "indimap"
@@ -30,4 +30,4 @@ dependencies = [
 
 [tool.coverage.run]
 branch = true
-source = ["indimap"]
+source = ["src"]

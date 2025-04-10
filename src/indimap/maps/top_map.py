@@ -10,7 +10,7 @@ import numpy as np
 import einops
 
 from .corr_map import CorrMap
-from .util import stat_func, map_func
+from indimap.util import stat_func, map_func
 rcParams['font.family'] = 'CMU Sans Serif'
 
 

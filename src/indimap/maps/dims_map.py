@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import einops
 import numpy as np
 
-from .util import map_func
+from indimap.util import map_func
 rcParams['font.family'] = 'CMU Sans Serif'
 
 

@@ -7,11 +7,7 @@ from pathlib import Path
 import numpy as np
 import pickle
 
-from .Maps.corr_map import CorrMap
-from .Maps.rank_map import RankMap
-from .Maps.top_map import TopMap
-from .Maps.dims_map import DimsMap
-from .Maps.pred_map import PredMap
+from indimap.maps import CorrMap, RankMap, TopMap, DimsMap, PredMap
 
 class IndiMap:
     def __init__(self, config):

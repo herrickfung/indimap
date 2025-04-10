@@ -1,1 +1,0 @@
-from .indimap import IndiMap

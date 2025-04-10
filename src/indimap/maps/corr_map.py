@@ -10,7 +10,7 @@ from pathlib import Path
 import einops
 import numpy as np
 
-from .util import stat_func, map_func
+from indimap.util import stat_func, map_func
 
 rcParams['font.family'] = 'CMU Sans Serif'
 

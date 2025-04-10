@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["indimap"]
+
+[project]
+name = "indimap"
+version = "0.0.1"
+description = "Python package for mapping individual differences in human behavior"
+authors = [
+    { name = "Herrick Fung", email = "herrickfung@gmail.com" }
+]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "einops>=0.8.0",
+    "matplotlib>=3.6.3",
+    "numpy>=1.23.5",
+    "pandas>=1.5.3",
+    "scikit-learn>=1.4.0",
+    "scipy>=1.11.4",
+    "tqdm>=4.66.1"
+]
+
+[tool.coverage.run]
+branch = true
+source = ["indimap"]

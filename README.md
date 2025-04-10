@@ -16,7 +16,7 @@ To use the IndiMap library, ensure the following Python dependencies are install
 Clone the repository and run the following commands in the root directory:
 ```bash
 git clone https://github.com/herrickfung/IndiMap.git
-pip install -r requirements.txt
+cd IndiMap
 pip install .
 ```
 
@@ -25,7 +25,7 @@ If you're running on virtual enviornment,
 python3 -m venv ./venv/
 source ./venv/bin/activate
 git clone https://github.com/herrickfung/IndiMap.git
-pip install -r requirements.txt
+cd IndiMap
 pip install .
 ```
 

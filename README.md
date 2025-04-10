@@ -2,7 +2,7 @@
 This repository provides the IndiMap library, a Python library designed for analyzing and mapping individual differences in human behavior onto convolutional neural networks in perceptual decision-making tasks.
 
 ## Python Dependencies
-To use the IndiMap library, ensure the following Python dependencies are installed. The library is tested exclusively with these versions:
+The IndiMap library requires the following dependencies:
 
 1. einops==0.8.0
 1. matplotlib==3.6.3
@@ -20,7 +20,7 @@ cd IndiMap
 pip install .
 ```
 
-If you're running on virtual enviornment, 
+If you're running on virtual environment, 
 ```bash
 python3 -m venv ./venv/
 source ./venv/bin/activate

@@ -226,3 +226,57 @@ Graph path:                     {self.graph_path}
         for name, func in tasks:
             print(f"Plotting {name}")
             func()
+
+    def get_corr_map(self, mat: str):
+        """ Get the correlation map """
+        return self.corr_map.corr_maps[mat]
+
+    def get_corr_results(self, mat: str, target: str, btw: str):
+        """ Get the correlation results """
+        string = f"{target}_btw_{btw}"
+        return self.corr_map.corr_results[mat][string]
+
+    def get_rank_results(self, mat: str, btw: str):
+        """ Get the rank results """
+        return self.rank_map.rank_results[mat][f"btw_{btw}"]
+
+    def get_top_map(self, mat: str):
+        """ Get the top map """
+        return self.top_map.top_maps[mat]
+
+    def get_top_ct(self, mat: str):
+        """ Get the top count """
+        return self.top_map.top_ct[mat]
+
+    def get_top_corr(self, mat: str):
+        """ Get the top correlation """
+        return self.top_map.top_corr[mat]
+
+    def get_top_results(self, mat: str, btw: str, corr_on: str):
+        """ Get the top results """
+        return self.top_map.top_results[mat][f"{corr_on}_btw_{btw}"]
+
+    def get_mds(self):
+        """ Get the MDS results """
+        return self.dims_map.mds_results
+
+    def get_pca_results(self, center: bool, fit_on: str, proj_to: str, scramble: bool):
+        """ Get the PCA results """
+        if center:
+            center_text = 'centered'
+        else:
+            center_text = 'uncentered'
+        if scramble:
+            proj = f'P_S_{proj_to}'
+        else:
+            proj = f'P_{proj_to}'
+        return self.dims_map.pca_results[center_text][fit_on][proj]
+
+    def get_pred_results(self, by: str, using: str, within_metric: bool):
+        """ Get the prediction results """
+        if within_metric:
+            met_type = 'within'
+        else:
+            met_type = 'across'
+        return self.pred_map.pred_results[met_type][by][using]
+        

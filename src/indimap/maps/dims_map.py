@@ -46,8 +46,8 @@ class DimsMap:
     def load_all(self, path):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'DimsMap_results.npz', allow_pickle=True)
-        self.pca_objects = loaded['PCA_objs']
-        self.pca_results = loaded['PCA_results']
+        self.pca_objects = loaded['PCA_objs'].item()
+        self.pca_results = loaded['PCA_results'].item()
         self.mds_results = loaded['MDS']
 
     def save_all(self, path):

@@ -3,6 +3,7 @@ Top-level wrapper for all analyses.
 """
 
 from tqdm import tqdm
+from collections import namedtuple
 from pathlib import Path
 import numpy as np
 import pickle
@@ -227,30 +228,161 @@ Graph path:                     {self.graph_path}
             print(f"Plotting {name}")
             func()
 
-    def get_corr_map(self, mat: str):
-        """ Get the correlation map """
-        return self.corr_map.corr_maps[mat]
+    def get_corr_map(self, map_from: str, map_to: str):
+        """
+        Retrieve the correlation map for a specified pair of matrices.
+        This function fetches the correlation map between two specified 
+        matrices ("subj" or "inst") from the stored correlation maps.
 
-    def get_corr_results(self, mat: str, target: str, btw: str):
-        """ Get the correlation results """
-        string = f"{target}_btw_{btw}"
-        return self.corr_map.corr_results[mat][string]
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
 
-    def get_rank_results(self, mat: str, btw: str):
-        """ Get the rank results """
-        return self.rank_map.rank_results[mat][f"btw_{btw}"]
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+              otherwise None.
+        """
 
-    def get_top_map(self, mat: str):
-        """ Get the top map """
-        return self.top_map.top_maps[mat]
+        CorrelationMapping = namedtuple("CorrelationMapping", ["dims", "mat"])
+        return CorrelationMapping(
+            dims=(
+            "Dimensions: bootstrap iterations x split-half x metrics x "
+            f"{mat_from} x {mat_to}"
+            ),
+            mat=self.corr_map.corr_maps.get(f"{mat_from}_to_{mat_to}", None)
+        )
 
-    def get_top_ct(self, mat: str):
-        """ Get the top count """
-        return self.top_map.top_ct[mat]
+    def get_corr_results(self, map_from: str, map_to: str, target: str, btw: str):
+        """
+        Retrieve correlation results for a specific mapping and target.
 
-    def get_top_corr(self, mat: str):
-        """ Get the top correlation """
-        return self.top_map.top_corr[mat]
+        Args:
+            map_from (str): The source mapping identifier, either "subj", or "inst".
+            map_to (str): The target mapping identifier, either "subj", or "inst".
+            target (str): The target variable for which correlation results are retrieved, either "subj", or "inst".
+            btw (str): The between-group comparison identifier, either "split" or "var".
+
+        Returns:
+            namedtuple: A `CorrelationResults` namedtuple containing:
+                - dims (str): A description of the dimensions of the correlation results.
+                - mat (np.ndarray): The correlation results matrix for the specified parameters.
+
+        Example:
+            results = obj.get_corr_results("map1", "map2", "target_var", "group1")
+            print(results.dims)  # Outputs the dimensions description
+            print(results.mat)   # Outputs the correlation results matrix
+        """
+
+        CorrelationResults = namedtuple("CorrelationResults", ["dims", "mat"])
+        return CorrelationResults(
+            dims=(
+                f"Dimensions: bootstrap iterations x metrics x {target}"
+            ),
+            mat=self.corr_map.corr_results[f"{map_from}_to_{map_to}"][f"{target}_btw_{btw}"]
+        )
+        
+    def get_rank_results(self, mat_from: str, map_to: str, btw: str):
+        """
+        Retrieve rank results from the rank map.
+
+        Args:
+            map_from (str): The source mapping identifier, either "subj", or "inst".
+            map_to (str): The target mapping identifier, either "subj", or "inst".
+            btw (str): The between-group comparison identifier, either "split" or "var".
+
+        Returns:
+            RankResults: A named tuple containing:
+                - dims (str): Description of the dimensions of the rank results.
+                - mat (np.ndarray): The rank results matrix corresponding to the specified 
+                  mapping and between-group comparison.
+        """
+
+        RankResults = namedtuple("RankResults", ["dims", "mat"])
+        return RankResults(
+            dims=(
+                "Dimensions: bootstrap iterations x metrics"
+            ),
+            mat=self.rank_map.rank_results[f"{mat_from}_to_{map_to}"][f"btw_{btw}"]
+        )
+
+    def get_top_map(self, map_from: str, map_to: str):
+        """
+        Retrieve the correlation map for a specified pair of matrices,
+        retaining only the best mapped target for each source matrix. 
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+              otherwise None.
+        """
+
+        TopMapping = namedtuple("TopMapping", ["dims", "mat"])
+        return TopMapping(
+            dims=(
+                "Dimensions: bootstrap iterations x split-half x metrics x "
+                f"{map_from} x {map_to}"
+            ),
+            mat=self.top_map.top_maps[f"{map_from}_to_{map_to}"]
+        )
+
+    def get_top_ct(self, map_from: str, map_to: str):
+        """
+        Retrieve the count of the best mapped target for each source matrix.
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+              otherwise None.
+        """
+
+        TopCount = namedtuple("TopCount", ["dims", "mat"])
+        return TopCount(
+            dims=(
+                "Dimensions: bootstrap iterations x split-half x metrc x"
+                f"{map_from}"
+            ),
+            mat=self.top_map.top_ct[f"{map_from}_to_{map_to}"]
+        )
+
+    def get_top_corr(self, map_from: str, map_to: str):
+        """
+        Retrieve the correlation valules of the best mapped target for each source matrix.
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+              otherwise None.
+        """
+
+        TopCorr = namedtuple("TopCorr", ["dims", "mat"])
+        return TopCorr(
+            dims=(
+                "Dimensions: bootstrap iterations x split-half x metrc x"
+                f"{map_from}"
+            ),
+            mat=self.top_map.top_corr[f"{map_from}_to_{map_to}"]
+        )
 
     def get_top_results(self, mat: str, btw: str, corr_on: str):
         """ Get the top results """
@@ -279,4 +411,4 @@ Graph path:                     {self.graph_path}
         else:
             met_type = 'across'
         return self.pred_map.pred_results[met_type][by][using]
-        
+

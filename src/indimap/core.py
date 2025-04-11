@@ -6,8 +6,6 @@ from itertools import permutations
 from tqdm import tqdm
 from collections import namedtuple
 from pathlib import Path
-import numpy as np
-import pickle
 
 from indimap.maps import CorrMap, RankMap, TopMap, DimsMap, PredMap
 
@@ -508,4 +506,3 @@ Graph path:                     {self.graph_path}
             metric=metric_pair,
             mat=self.pred_map.pred_results[met_type][by][using]
         )
-

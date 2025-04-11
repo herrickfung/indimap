@@ -2,6 +2,7 @@
 Top-level wrapper for all analyses.
 """
 
+from itertools import permutations
 from tqdm import tqdm
 from collections import namedtuple
 from pathlib import Path
@@ -250,9 +251,9 @@ Graph path:                     {self.graph_path}
         return CorrelationMapping(
             dims=(
             "Dimensions: bootstrap iterations x split-half x metrics x "
-            f"{mat_from} x {mat_to}"
+            f"{map_from} x {map_to}"
             ),
-            mat=self.corr_map.corr_maps.get(f"{mat_from}_to_{mat_to}", None)
+            mat=self.corr_map.corr_maps.get(f"{map_from}_to_{map_to}", None)
         )
 
     def get_corr_results(self, map_from: str, map_to: str, target: str, btw: str):
@@ -269,21 +270,18 @@ Graph path:                     {self.graph_path}
             namedtuple: A `CorrelationResults` namedtuple containing:
                 - dims (str): A description of the dimensions of the correlation results.
                 - mat (np.ndarray): The correlation results matrix for the specified parameters.
-
-        Example:
-            results = obj.get_corr_results("map1", "map2", "target_var", "group1")
-            print(results.dims)  # Outputs the dimensions description
-            print(results.mat)   # Outputs the correlation results matrix
         """
 
         CorrelationResults = namedtuple("CorrelationResults", ["dims", "mat"])
         return CorrelationResults(
             dims=(
-                f"Dimensions: bootstrap iterations x metrics x {target}"
+            f"Dimensions: bootstrap iterations x metrics x {target}"
             ),
-            mat=self.corr_map.corr_results[f"{map_from}_to_{map_to}"][f"{target}_btw_{btw}"]
+            mat=self.corr_map.corr_results.get(
+                f"{map_from}_to_{map_to}", {}
+                ).get(f"{target}_btw_{btw}", None)
         )
-        
+
     def get_rank_results(self, mat_from: str, map_to: str, btw: str):
         """
         Retrieve rank results from the rank map.
@@ -303,9 +301,11 @@ Graph path:                     {self.graph_path}
         RankResults = namedtuple("RankResults", ["dims", "mat"])
         return RankResults(
             dims=(
-                "Dimensions: bootstrap iterations x metrics"
+            "Dimensions: bootstrap iterations x metrics"
             ),
-            mat=self.rank_map.rank_results[f"{mat_from}_to_{map_to}"][f"btw_{btw}"]
+            mat=self.rank_map.rank_results.get(
+                f"{mat_from}_to_{map_to}", {}
+                ).get(f"btw_{btw}", None)
         )
 
     def get_top_map(self, map_from: str, map_to: str):
@@ -328,10 +328,10 @@ Graph path:                     {self.graph_path}
         TopMapping = namedtuple("TopMapping", ["dims", "mat"])
         return TopMapping(
             dims=(
-                "Dimensions: bootstrap iterations x split-half x metrics x "
-                f"{map_from} x {map_to}"
+            "Dimensions: bootstrap iterations x split-half x metrics x "
+            f"{map_from} x {map_to}"
             ),
-            mat=self.top_map.top_maps[f"{map_from}_to_{map_to}"]
+            mat=self.top_map.top_maps.get(f"{map_from}_to_{map_to}", None)
         )
 
     def get_top_ct(self, map_from: str, map_to: str):
@@ -353,10 +353,10 @@ Graph path:                     {self.graph_path}
         TopCount = namedtuple("TopCount", ["dims", "mat"])
         return TopCount(
             dims=(
-                "Dimensions: bootstrap iterations x split-half x metrc x"
-                f"{map_from}"
+            "Dimensions: bootstrap iterations x split-half x metrc"
+            f"{map_from}"
             ),
-            mat=self.top_map.top_ct[f"{map_from}_to_{map_to}"]
+            mat=self.top_map.top_ct.get(f"{map_from}_to_{map_to}", None)
         )
 
     def get_top_corr(self, map_from: str, map_to: str):
@@ -378,22 +378,73 @@ Graph path:                     {self.graph_path}
         TopCorr = namedtuple("TopCorr", ["dims", "mat"])
         return TopCorr(
             dims=(
-                "Dimensions: bootstrap iterations x split-half x metrc x"
-                f"{map_from}"
+            "Dimensions: bootstrap iterations x split-half x metrc x"
+            f"{map_from}"
             ),
-            mat=self.top_map.top_corr[f"{map_from}_to_{map_to}"]
+            mat=self.top_map.top_corr.get(f"{map_from}_to_{map_to}", None)
         )
 
-    def get_top_results(self, mat: str, btw: str, corr_on: str):
-        """ Get the top results """
-        return self.top_map.top_results[mat][f"{corr_on}_btw_{btw}"]
+    def get_top_results(self, map_from: str, map_to: str, btw: str, corr_on: str):
+        """
+        Retrieve the top map results.
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+            btw (str): The between-group comparison identifier, either "split" or "var".
+            corr_on (str): The metric to correlate on, either "ct", or "corr".
+
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The result matrix if it exists, 
+              otherwise None.
+        """
+
+        TopResults = namedtuple("TopResults", ["dims", "mat"])
+        return TopResults(
+            dims=(
+            "Dimensions: bootstrap iterations x metrics"
+            ),
+            mat=self.top_map.top_results.get(
+                f"{map_from}_to_{map_to}", {}
+                ).get(f"{corr_on}_btw_{btw}", None)
+        )
 
     def get_mds(self):
-        """ Get the MDS results """
-        return self.dims_map.mds_results
+        """
+        Retrieve the results of the Multi-Dimensional Scaling (MDS) analysis.
+        Returns:
+            namedtuple: An MDS_Results namedtuple containing:
+                - dims (str): A description of the dimensions in the MDS results.
+                - mat (array-like): The MDS results matrix
+        """
 
-    def get_pca_results(self, center: bool, fit_on: str, proj_to: str, scramble: bool):
-        """ Get the PCA results """
+        MDS_Results = namedtuple("MDS_Results", ["dims", "mat"])
+        return MDS_Results(
+            dims=(
+            "Dimensions: metrics x human/model x N_subjs x 2 MDS dimensions"
+            ),
+            mat=self.dims_map.mds_results
+        )
+
+    def get_pca_results(self, fit_on: str, proj_to: str, center: bool, scramble: bool):
+        """
+        Retrieve PCA results based on specified parameters.
+
+        Args:
+            fit_on (str): The dataset or condition on which the PCA was fitted (e.g., 'human', 'model').
+            proj_to (str): The projection target (e.g., 'human', 'model').
+            center (bool): If True, use centered PCA results; otherwise, use uncentered PCA results.
+            scramble (bool): If True, use scrambled projection results; otherwise, use standard projection results.
+
+        Returns:
+            namedtuple: A named tuple `PCA_Results` containing:
+                - dims (str): Description of the dimensions of the PCA results.
+                - mat (numpy.ndarray): The PCA results matrix corresponding to the specified parameters.
+        """
+
         if center:
             center_text = 'centered'
         else:
@@ -402,13 +453,59 @@ Graph path:                     {self.graph_path}
             proj = f'P_S_{proj_to}'
         else:
             proj = f'P_{proj_to}'
-        return self.dims_map.pca_results[center_text][fit_on][proj]
+
+        PCA_Results = namedtuple("PCA_Results", ["dims", "mat"])
+        return PCA_Results(
+            dims=(
+            "Dimensions: bootstrap iterations x conditions x metrics x \
+            x PCA components x human/model"
+            ""
+            ),
+            mat=self.dims_map.pca_results[center_text][fit_on][proj]
+        )
 
     def get_pred_results(self, by: str, using: str, within_metric: bool):
-        """ Get the prediction results """
+        """
+        Retrieve prediction results based on specified parameters.
+        This function fetches prediction results from the `pred_map` attribute
+        using the specified grouping, method, and metric type.
+
+        Args:
+            by (str): Perform prediction by this variable, either 'subj' or 'inst'.
+            using (str): The method used for prediction. Options include:
+                         'rand', 'avg', 'corr', 'ols', 'lasso', 'ridge'.
+                1. 'rand' - Random individual.
+                2. 'avg' - Average of all individuals.
+                3. 'corr' - Weighted average of all individuals by CorrMap.
+                4. 'ols' - Ordinary Least Squares regression.
+                5. 'lasso' - L1 Lasso regression.
+                6. 'ridge' - L2 Ridge regression.
+            within_metric (bool): If True, retrieves results for within metrics predictions.
+                                  If False, retrieves results across metrics predictions.
+
+        Returns:
+            namedtuple: A named tuple `PredResults` containing:
+                - dims (str): Description of the dimensions of the prediction results.
+                - metric (list or str): The order of the metric dimension.
+                - mat (Any): The prediction results matrix retrieved from `pred_map`.
+        """
+
         if within_metric:
             met_type = 'within'
+            metric_pair = self.map_var
         else:
             met_type = 'across'
-        return self.pred_map.pred_results[met_type][by][using]
+            metric_pair = list(permutations(self.map_var, 2))
+
+        if using in ['rand', 'avg', 'corr']:
+            dims = 'Dimensions: bootstrap iterations x metrics x subj'
+        else:
+            dims = 'Dimensions: condition x metrics x subj'
+
+        PredResults = namedtuple("PredResults", ["dims", "metric", "mat"])
+        return PredResults(
+            dims=dims,
+            metric=metric_pair,
+            mat=self.pred_map.pred_results[met_type][by][using]
+        )
 

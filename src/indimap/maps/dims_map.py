@@ -26,6 +26,7 @@ class DimsMap:
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
         self.n_comps = self.config.get('nComp_PCA')
+        self.n_bs = self.config.get('bootstrap_iterations')
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
         self.graph_path = Path(self.config['graph_path'])
@@ -320,18 +321,20 @@ class DimsMap:
                                                pca = pca,
                                                scaler = scaler,
                                                center=center,
-                                               shuffle=True
+                                               shuffle=True,
+                                               iter = self.n_bs,
                                                ),
                     'P_S_model': self._project(data = self.model_arr,
                                                pca = pca,
                                                scaler = scaler,
                                                center=center,
-                                               shuffle=True
+                                               shuffle=True,
+                                               iter = self.n_bs,
                                                ),
                 }
 
     @staticmethod
-    def _project(data, pca, scaler, center=False, shuffle=False) -> np.array:
+    def _project(data, pca, scaler, center=False, shuffle=False, iter=1) -> np.array:
         """
         Function to project data onto PCA components
         -----------------------------------------------------------------------
@@ -346,7 +349,7 @@ class DimsMap:
             data = map_func.center_to_zero(data)
 
         if shuffle:
-            data = np.tile(data, (1000, 1, 1, 1, 1))
+            data = np.tile(data, (iter, 1, 1, 1, 1))
             data = map_func.shuffle_image_order(data)
         else:
             data = np.expand_dims(data, axis=0)

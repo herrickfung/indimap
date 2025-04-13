@@ -87,4 +87,4 @@ This tutorial will guide you through the process of using the `IndiMap` library 
 
 - **Methods:**
     - `compute_all(load_exists=False)`: Computes all necessary mappings. Running this function may take a while (in general less than 15 minutes). If you wish to compute specific maps exclusively, replace _all with _corr, _rank, _top, _dims, _pred depending on your needs. Set `load_exists` to `True` if you want to load existing results.
-    - `plot_all()`: Generates and saves all plots. If you wish to plot specific map exclusively, replace _all with _cor, _rank, _top, _dims, _pred depending on your needs.
+    - `plot_all()`: Generates and saves all plots. If you wish to plot specific map exclusively, replace _all with _corr, _rank, _top, _dims, _pred depending on your needs.

@@ -16,34 +16,35 @@ class IndiMap:
 
         Parameters:
         --------------------------------------------------------------------------
-        task_name: str, optional
-            Task name (default: 'Task').
-        model_name : str, optional
-            Model name (default: 'Model').
-        subj_data : pandas.DataFrame
-            Human data (Pandas DataFrame).
-        inst_data : pandas.DataFrame
-            Model/Instance data (Pandas DataFrame).
-        subj_column_name : str, optional
-            Subject identifier in the DataFrame (default: 'subj').
-        inst_column_name : str, optional
-            Model/Instance identifier in the DataFrame (default: 'inst').
-        map_variables : list of str, optional
-            Column names to map/correlate on (default: ['acc', 'conf']).
-        map_together : list of str, optional
-            Variables to map/correlate together (e.g., image_index, stimulus).
-        map_separate : list of str, optional
-            Variables to map/correlate separately. The resulting map will be averaged after mapping.
-        bootstrap_iterations : int, optional
-            Number of bootstrap iterations (default: 1000).
-        bootstrap_seed : int, optional
-            Seed for reproducibility (default: 42).
-        nComp_PCA : int, optional
-            Number of components for PCA (default: 10).
-        output_path : str, optional
-            Path for storing output (default: 'IndiMap_Result/').
-        graph_path: str, optional
-            Path for storing plots (default: 'IndiMap_Plots/').
+        config: dict
+            task_name: str, optional
+                Task name (default: 'Task').
+            model_name : str, optional
+                Model name (default: 'Model').
+            subj_data : pandas.DataFrame
+                Human data (Pandas DataFrame).
+            inst_data : pandas.DataFrame
+                Model/Instance data (Pandas DataFrame).
+            subj_column_name : str, optional
+                Subject identifier in the DataFrame (default: 'subj').
+            inst_column_name : str, optional
+                Model/Instance identifier in the DataFrame (default: 'inst').
+            map_variables : list of str, optional
+                Column names to map/correlate on (default: ['acc', 'conf']).
+            map_together : list of str, optional
+                Variables to map/correlate together (e.g., image_index, stimulus).
+            map_separate : list of str, optional
+                Variables to map/correlate separately. The resulting map will be averaged after mapping.
+            bootstrap_iterations : int, optional
+                Number of bootstrap iterations (default: 1000).
+            bootstrap_seed : int, optional
+                Seed for reproducibility (default: 42).
+            nComp_PCA : int, optional
+                Number of components for PCA (default: 10).
+            output_path : str, optional
+                Path for storing output (default: 'IndiMap_Result/').
+            graph_path: str, optional
+                Path for storing plots (default: 'IndiMap_Plots/').
         """
 
         default_config = {
@@ -78,6 +79,12 @@ class IndiMap:
         self.graph_path = Path(self.config['graph_path'])
         self.graph_path.mkdir(parents=True, exist_ok=True)
 
+        self.n_subjs = self.human[self.human_iden].nunique()
+        self.n_insts = self.model[self.model_iden].nunique()
+        self.n_metrics = len(self.map_var)
+        self.n_imgs = self.human[self.map_tgt].nunique()
+        self.n_conds = self.human[self.map_sep].nunique()
+
         """ Initialize all maps """
         self.corr_map = CorrMap(self.config)
         self.rank_map = RankMap(self.config)
@@ -86,19 +93,15 @@ class IndiMap:
         self.pred_map = PredMap(self.config)
 
     def __str__(self):
-        n_subjs = self.human[self.human_iden].nunique()
-        n_insts = self.model[self.model_iden].nunique()
-        n_imgs = self.human[self.map_tgt].nunique()
-        n_conds = self.human[self.map_sep].nunique()
         return f"""
 --------------------------------------------------------------------------------
 Individual Differences Mapping (IndiMap) analyses
 --------------------------------------------------------------------------------
 Dataset Name:                   {self.model_name.capitalize()} on {self.task_name.capitalize()}
-Number of subjects:             {n_subjs}
-Number of instances:            {n_insts}
-Number of Conditions:           {n_conds}
-Number of Images:               {n_imgs}
+Number of subjects:             {self.n_subjs}
+Number of instances:            {self.n_insts}
+Number of Conditions:           {self.n_conds}
+Number of Images:               {self.n_imgs}
 Mapping variables:              {self.map_var}
 Mapping together:               {self.map_tgt}
 Mapping separately:             {self.map_sep}

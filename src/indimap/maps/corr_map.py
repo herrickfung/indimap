@@ -16,7 +16,7 @@ rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class CorrMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         """Initializes the CorrMap class."""
 
         self.config = config
@@ -171,9 +171,7 @@ class CorrMap:
         print(fig_path)
     
     def plot_btw_split(self) -> None:
-        """
-        Plot the correlation between bootstrap splits of images
-        """
+        """ Plot the correlation between bootstrap splits of images """
 
         n_bars = 2
         n_maps = 3
@@ -229,9 +227,7 @@ class CorrMap:
         print(fig_path)
 
     def plot_btw_var(self) -> None:
-        """
-        plot the correlation between metrics
-        """
+        """ plot the correlation between metrics """
 
         n_bars = 2
         n_maps = 3

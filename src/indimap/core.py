@@ -10,7 +10,7 @@ from pathlib import Path
 from indimap.maps import CorrMap, RankMap, TopMap, DimsMap, PredMap
 
 class IndiMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         """
         Initialize analysis with a configuration dictionary.
 
@@ -120,7 +120,7 @@ Graph path:                     {self.graph_path}
 --------------------------------------------------------------------------------
 """
 
-    def compute_corr(self, load_exists = False):
+    def compute_corr(self, load_exists: bool = False):
         """ CorrMap analysis """
         if load_exists:
             self.corr_map.load_all()
@@ -129,7 +129,7 @@ Graph path:                     {self.graph_path}
             self.corr_map.compute_corr_analysis()
             self.corr_map.save_all()
 
-    def compute_rank(self, load_exists = False):
+    def compute_rank(self, load_exists: bool = False):
         """ RankMap analysis """
         if load_exists:
             self.rank_map.load_all(self.output_path)
@@ -142,7 +142,7 @@ Graph path:                     {self.graph_path}
             self.rank_map.compute_rank_analysis()
             self.rank_map.save_all(self.output_path)
 
-    def compute_top(self, load_exists = False):
+    def compute_top(self, load_exists: bool = False): 
         """ TopMap analysis """
         if load_exists:
             self.top_map.load_all(self.output_path)
@@ -155,7 +155,7 @@ Graph path:                     {self.graph_path}
             self.top_map.compute_top_analysis()
             self.top_map.save_all(self.output_path)
 
-    def compute_dims(self, load_exists = False):
+    def compute_dims(self, load_exists: bool = False):
         """ DimsMap analysis """
         if load_exists:
             self.dims_map.load_all(self.output_path)
@@ -163,7 +163,7 @@ Graph path:                     {self.graph_path}
             self.dims_map.compute_dims_analysis()
             self.dims_map.save_all(self.output_path)
 
-    def compute_pred(self, load_exists = False):
+    def compute_pred(self, load_exists: bool = False):
         """ Prediction analyses """
         if load_exists:
             self.pred_map.load_all(self.output_path)
@@ -171,7 +171,7 @@ Graph path:                     {self.graph_path}
             self.pred_map.compute_pred_maps()
             self.pred_map.save_all(self.output_path)
 
-    def compute_all(self, load_exists = False):
+    def compute_all(self, load_exists: bool = False):
         """Compute all results"""
         tasks = [
             ('CorrMap', self.compute_corr),

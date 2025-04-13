@@ -109,7 +109,7 @@ class CorrMap:
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
 
-    def do_corr_analysis(self, key) -> dict:
+    def do_corr_analysis(self, key: str) -> dict:
         """pipeline for performing all analysis in the correlation map matrix"""
         # convert to z scores before correlating again in all below
         data = stat_func.r2z(self.corr_maps[key], 'pearson')
@@ -285,7 +285,7 @@ class CorrMap:
         print(fig_path)
 
     @staticmethod
-    def corr_btw_split(data, axis) -> tuple:
+    def corr_btw_split(data: np.ndarray, axis: int) -> tuple:
         """
         Compute the correlation between bootstrap splits of image data
         ---------------------------------------------------------------------------
@@ -293,7 +293,7 @@ class CorrMap:
         ---------------------------------------------------------------------------
         data (np.ndarray): The input data array with shape
         [bootstrap split, split-half, metrics, subj, inst].
-        axis (str): Specifies axis to compute correlation on.
+        axis (int): Specifies axis to compute correlation on.
         """
 
         unique_spt_pairs = list(combinations(range(data.shape[1]), 2))
@@ -339,7 +339,7 @@ class CorrMap:
 
 
     @staticmethod
-    def corr_btw_var(data, axis) -> tuple:
+    def corr_btw_var(data: np.ndarray, axis: int) -> tuple:
         """
         Compute the correlation between metrics
         ---------------------------------------------------------------------------
@@ -347,7 +347,7 @@ class CorrMap:
         ---------------------------------------------------------------------------
         data (np.ndarray): The input data array with shape
         [bootstrap split, split-half, metrics, subj, inst].
-        axis (str): Specifies axis to compute correlation on.
+        axis (int): Specifies axis to compute correlation on.
         """
 
         unique_var_pairs = list(combinations(range(data.shape[2]), 2))

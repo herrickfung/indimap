@@ -25,7 +25,7 @@ from indimap.util import map_func, pred_func
 
 
 class PredMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.config = config
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
@@ -409,6 +409,3 @@ class PredMap:
         plt.savefig(fig_path, dpi=384)
         plt.close()
         print(fig_path)
-
-
-

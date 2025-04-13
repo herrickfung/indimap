@@ -16,7 +16,7 @@ rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class DimsMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.config = config
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
@@ -44,14 +44,14 @@ class DimsMap:
         file_path = self.output_path / 'DimsMap_results.npz'
         return file_path.exists()
 
-    def load_all(self, path):
+    def load_all(self, path: str):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'DimsMap_results.npz', allow_pickle=True)
         self.pca_objects = loaded['PCA_objs'].item()
         self.pca_results = loaded['PCA_results'].item()
         self.mds_results = loaded['MDS']
 
-    def save_all(self, path):
+    def save_all(self, path: str):
         """ Save results to a file """
         output = {
             'PCA_objs': self.pca_objects,
@@ -160,19 +160,31 @@ class DimsMap:
         print(fig_path)
 
     @staticmethod
-    def _compute_var(data, result):
+    def _compute_var(data: np.ndarray, result: np.ndarray) -> np.ndarray:
+        """ Compute explained variance for each component """
         return np.var(result, axis = 1) / np.sum(np.var(data, axis = 0))
 
     @staticmethod
-    def _scale_data(data, scaler, cent, shuffle) -> np.array:
-        # center and shuffle if needed
+    def _scale_data(data: np.ndarray, 
+                    scaler: StandardScaler, 
+                    cent: bool, 
+                    shuffle: bool,
+                    ) -> np.array:
+        """Scale the data using the provided scaler, with optional centering and shuffling."""
+
         if cent:
             data = map_func.center_to_zero(data)
         if shuffle:
             data = map_func.shuffle_image_order(data)
         return scaler.transform(data)
 
-    def _plot_pca_common(self, center, pca_obj, plot_type='cumulative'):
+    def _plot_pca_common(self, 
+                         center: bool, 
+                         pca_obj: PCA, 
+                         plot_type: str='cumulative'
+                         ) -> None:
+        """Plot PCA results with common functionality."""
+
         proj_arr = ['P_human', 'P_model', 'P_S_human', 'P_S_model']
         labels = ['Human', 'Model', 'Shuffled Human', 'Shuffled Model']
         proj_data_arr = [self.human_arr, self.model_arr, self.human_arr, self.model_arr]
@@ -248,7 +260,12 @@ class DimsMap:
                 self._plot_pca_common(center, pca_obj, plot_type='non-cumulative')
 
     @staticmethod
-    def fit_pca(arr, n_comps, seed, center=False, shuffle=False) -> dict:
+    def fit_pca(arr:np.ndarray, 
+                n_comps: int, 
+                seed: int, 
+                center: bool = False, 
+                shuffle: bool = False
+                ) -> dict:
         """Function to fit PCA and return scaler and pca objects"""
 
         # center if needed
@@ -334,14 +351,19 @@ class DimsMap:
                 }
 
     @staticmethod
-    def _project(data, pca, scaler, center=False, shuffle=False, iter=1) -> np.array:
+    def _project(data: np.ndarray, 
+                 pca: PCA, 
+                 scaler: StandardScaler,
+                 center: bool = False,
+                 shuffle: bool = False, 
+                 iter: int = 1
+                 ) -> np.array:
         """
         Function to project data onto PCA components
         -----------------------------------------------------------------------
         Return:
         results: np.array (size: n_shuffle x n_conds x n_mets x n_comps x n_subjs)
             projection results
-
         """
 
         # center and shuffle if needed

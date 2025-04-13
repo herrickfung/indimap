@@ -15,7 +15,7 @@ rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class TopMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.config = config
         self.corr_map = CorrMap(self.config)
         self.top_maps = {
@@ -39,12 +39,12 @@ class TopMap:
             'inst_to_inst': None,
         }
 
-    def check_exist(self, path):
+    def check_exist(self, path: str):
         # check whether the map exist
         file_path = path / 'TopMap_results.npz'
         return file_path.exists()
 
-    def load_all(self, path):
+    def load_all(self, path: str):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'TopMap_results.npz', allow_pickle=True)
         self.top_maps = loaded['top_maps'].item()
@@ -52,7 +52,7 @@ class TopMap:
         self.top_corr = loaded['top_corr'].item()
         self.top_results = loaded['top_results'].item()
 
-    def save_all(self, path):
+    def save_all(self, path: str):
         """ Save results to a file """
         output = {
             'top_maps': self.top_maps,
@@ -63,7 +63,7 @@ class TopMap:
         output_path = path / 'TopMap_results.npz'
         np.savez(output_path, **output)
 
-    def load_map_from_corr(self, path):
+    def load_map_from_corr(self, path: str):
         """ Loads precomputed results from CorrMap class"""
         self.corr_map.load_map()
 
@@ -85,7 +85,7 @@ class TopMap:
             self.top_ct[name], self.top_corr[name] = self.get_counts_and_corr(self.top_maps[name])
             self.top_results[name] = self.do_top_analysis(name)
 
-    def do_top_analysis(self, key) -> dict:
+    def do_top_analysis(self, key: str) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
         ct_btw_split_results = self.corr_btw_split(self.top_ct[key])
         corr_btw_split_results = self.corr_btw_split(self.top_corr[key], True)
@@ -237,7 +237,7 @@ class TopMap:
         plot_data(trans_data, 'Correlation between metrics (Best Instance Correlation)', 'TopCorrBtwMetrics.png')
 
     @staticmethod
-    def get_top(data) -> np.ndarray:
+    def get_top(data: np.ndarray) -> np.ndarray:
         """
         get the top performer of the input data, output shape unchanged
         ---------------------------------------------------------------------------
@@ -258,7 +258,7 @@ class TopMap:
         return result
 
     @staticmethod
-    def get_counts_and_corr(data) -> tuple:
+    def get_counts_and_corr(data: np.ndarray) -> tuple:
         """
         get the count of top performer for each instance,
         and the best correlation value for each subject
@@ -292,7 +292,7 @@ class TopMap:
         return count_results, corr_results
 
     @staticmethod
-    def corr_btw_split(data, is_pearson=False) -> np.ndarray:
+    def corr_btw_split(data: np.ndarray, is_pearson: bool = False) -> np.ndarray:
         """
         correlate count/correlation of subj/inst between split half bootstrap
         ---------------------------------------------------------------------------
@@ -315,7 +315,7 @@ class TopMap:
         return results
 
     @staticmethod
-    def corr_btw_var(data, is_pearson=False) -> np.ndarray:
+    def corr_btw_var(data: np.ndarray, is_pearson: bool = False) -> np.ndarray:
         """
         correlate count/correlation of subj/inst between metrics, Acc, RT, Conf, etc.
         ---------------------------------------------------------------------------

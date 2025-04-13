@@ -15,22 +15,22 @@ rcParams['font.family'] = 'CMU Sans Serif'
 
 
 class RankMap:
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.config = config
         self.corr_map = CorrMap(self.config)
         self.rank_results = None
 
-    def check_exist(self, path):
+    def check_exist(self, path: str):
         """ Check if the file exists """
         file_path = path / 'RankMap_results.npz'
         return file_path.exists()
 
-    def load_all(self, path):
+    def load_all(self, path: str):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'RankMap_results.npz', allow_pickle=True)
         self.rank_results = loaded['rank_results'].item()
 
-    def save_all(self, path):
+    def save_all(self, path: str):
         """ Save results to a file """
         output = {
             'rank_results': self.rank_results,
@@ -38,11 +38,11 @@ class RankMap:
         output_path = path / 'RankMap_results.npz'
         np.savez(output_path, **output)
 
-    def load_map_from_corr(self, path):
+    def load_map_from_corr(self, path: str):
         """ Loads precomputed results from CorrMap class"""
         self.corr_map.load_map()
 
-    def compute_corr_map(self):
+    def compute_corr_map(self) -> None:
         """ Computes and saves in CorrMap"""
         self.corr_map.compute_corr_maps()
         self.corr_map.save_map()
@@ -58,7 +58,7 @@ class RankMap:
             map_type: self.do_rank_analysis(map_type) for map_type in map_dicts
             }
 
-    def do_rank_analysis(self, map_type) -> dict:
+    def do_rank_analysis(self, map_type: str) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
 
         btw_split = self.optim_sorcd_btw_split(self.corr_map.corr_maps[map_type])
@@ -156,7 +156,7 @@ class RankMap:
         plt.close()
         print(fig_path)
 
-    def compute_sorcd_btw_var(self, data) -> np.ndarray:
+    def compute_sorcd_btw_var(self, data: np.ndarray) -> np.ndarray:
         """
         computing SORCD for between variables
         between split were averaged out
@@ -179,7 +179,7 @@ class RankMap:
         return results
 
     @staticmethod
-    def optim_sorcd_btw_split(data) -> np.ndarray:
+    def optim_sorcd_btw_split(data: np.ndarray) -> np.ndarray:
         """
         optimized way of computing SORCD,
         refer to the function below for more details
@@ -205,9 +205,10 @@ class RankMap:
         return result
 
     @staticmethod
-    def sorcd(data):
+    def _sorcd(data):
         """
         original idea of rank analysis SORCD
+        not used anywhere
         (Sum of Ranked Correlation Difference)
         """
 

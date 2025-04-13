@@ -1,10 +1,16 @@
 from sklearn.impute import SimpleImputer
 import numpy as np
+import pandas as pd
 
 from . import stat_func
 
 
-def convert_to_array(df, subj_name, var_name, tgt_name, sep_name) -> np.ndarray:
+def convert_to_array(df: pd.DataFrame, 
+                     subj_name: str, 
+                     var_name: str,
+                     tgt_name: str, 
+                     sep_name: str,
+                     ) -> np.ndarray:
     """
     Convert dataframe to numpy array.
     ---------------------------------------------------------------------------
@@ -17,6 +23,7 @@ def convert_to_array(df, subj_name, var_name, tgt_name, sep_name) -> np.ndarray:
     sep_name (str): Variable column name that map separately. Separate in array.
     ---------------------------------------------------------------------------
     """
+
     subjs = np.sort(df[subj_name].unique())
     seps = np.sort(df[sep_name].unique())
 
@@ -52,7 +59,7 @@ def convert_to_array(df, subj_name, var_name, tgt_name, sep_name) -> np.ndarray:
     return output
 
 
-def check_for_extreme(human, model) -> None:
+def check_for_extreme(human: np.ndarray, model: np.ndarray) -> None:
     """
     Check for extremely high/low accuracy in the data.
     Raise warning or error if found.
@@ -82,7 +89,7 @@ def check_for_extreme(human, model) -> None:
         raise ValueError(f"Instances {extreme_model} is achieving 99% or 1% accuracy, remove this instance")
 
 
-def split_half(human, model) -> tuple:
+def split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     """
     Recursive function to split the data into two halves.
     Ensure that no split contains only one unique value (failed to correlate).
@@ -121,7 +128,11 @@ def split_half(human, model) -> tuple:
         return chosen, unchosen
 
 
-def split_arr(human, model, n_bs, seed=42) -> tuple:
+def split_arr(human: np.ndarray, 
+              model: np.ndarray, 
+              n_bs: int, 
+              seed: int = 42,
+              ) -> tuple:
     """
     Split array into train and test sets.
     ---------------------------------------------------------------------------
@@ -154,7 +165,7 @@ def split_arr(human, model, n_bs, seed=42) -> tuple:
     return out_human, out_model
 
 
-def compute_full_corr_matrix(arr1, arr2) -> np.ndarray:
+def compute_full_corr_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     """
     Compute the full correlation matrix between two arrays.
     ---------------------------------------------------------------------------
@@ -172,7 +183,7 @@ def compute_full_corr_matrix(arr1, arr2) -> np.ndarray:
     return corr_matrix
 
 
-def mapping_matrix(arr1, arr2) -> np.ndarray:
+def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     """
     Compute the full correlation matrix between two sets of raw data.
     ---------------------------------------------------------------------------
@@ -224,7 +235,7 @@ def mapping_matrix(arr1, arr2) -> np.ndarray:
     return output
 
 
-def retain_max_per_row_in_mat(arr) -> np.ndarray:
+def retain_max_per_row_in_mat(arr: np.ndarray) -> np.ndarray:
     """
     Simple function to take in a 2D array and return a 2D array
     with only the max value per row, else nan
@@ -241,7 +252,7 @@ def retain_max_per_row_in_mat(arr) -> np.ndarray:
     return max_only
 
 
-def shuffle_image_order(arr, seed=42) -> np.ndarray:
+def shuffle_image_order(arr: np.ndarray, seed: int = 42) -> np.ndarray:
     """
     Shuffle the order of images in the last axis of the array.
     ---------------------------------------------------------------------------
@@ -264,7 +275,7 @@ def shuffle_image_order(arr, seed=42) -> np.ndarray:
     return shuf_arr
 
 
-def center_to_zero(arr) -> np.ndarray:
+def center_to_zero(arr: np.ndarray) -> np.ndarray:
     """
     Center the array to zero in the last axis of the array (images).
     ---------------------------------------------------------------------------

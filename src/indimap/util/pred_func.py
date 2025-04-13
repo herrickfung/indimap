@@ -80,7 +80,9 @@ def find_best_alpha(X, Y, model) -> float:
     return best_alpha
 
 
-def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray,
+def train_model_for_each(model, 
+                         X_train: np.ndarray, 
+                         Y_train: np.ndarray,
                          within: str,
                          ) -> tuple:
     """ Train the model for each met, subjs """
@@ -126,8 +128,12 @@ def train_model_for_each(model, X_train: np.ndarray, Y_train: np.ndarray,
     return W, C, A
 
 
-def test_model_for_each(model, X_test: np.ndarray, Y_test: np.ndarray,
-                        W: np.ndarray, C: np.ndarray, A: np.ndarray,
+def test_model_for_each(model, 
+                        X_test: np.ndarray, 
+                        Y_test: np.ndarray,
+                        W: np.ndarray, 
+                        C: np.ndarray, 
+                        A: np.ndarray,
                         within: str
                         ) -> np.ndarray:
     """ Test the model for each met, subjs """

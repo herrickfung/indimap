@@ -49,17 +49,17 @@ class DimsMap:
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'DimsMap_results.npz', allow_pickle=True)
         self.pca_objects = loaded['PCA_objs'].item()
-        self.split_half_pca_results = loaded['split_half_pca_results'].item()
         self.pca_results = loaded['PCA_results'].item()
         self.mds_results = loaded['MDS']
+        self.split_half_pca_results = loaded['SH_PCA'].item()
 
     def save_all(self, path: str):
         """ Save results to a file """
         output = {
             'PCA_objs': self.pca_objects,
             'PCA_results': self.pca_results,
-            'split_half_pca_results': self.split_half_pca_results,
             'MDS': self.mds_results,
+            'SH_PCA': self.split_half_pca_results,
         }
         output_path = path / 'DimsMap_results.npz'
         np.savez(output_path, **output)

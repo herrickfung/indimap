@@ -135,13 +135,12 @@ class DimsMap:
                     )
 
         # package output
-        self.split_half_pca_results = {"pca": pca_objs['pca'], 
+        self.split_half_pca_results = {"split_info": split_idx_array,
+                                       "pca": pca_objs['pca'], 
                                        "scaler": pca_objs['scaler'],
                                        "human_proj": human_proj,
-                                       "human_scaled_data": human_scaled,
                                        "proj_human_var": human_proj_var,
                                        "model_proj": model_proj,
-                                       "model_scaled_data": model_scaled,
                                        "proj_model_var": model_proj_var,
                                        }
 

@@ -34,6 +34,7 @@ class DimsMap:
         # results
         self.pca_objects = None
         self.pca_results = None
+        self.split_half_pca_results = None
         self.mds_results = None
 
         self.human_arr = None
@@ -48,6 +49,7 @@ class DimsMap:
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'DimsMap_results.npz', allow_pickle=True)
         self.pca_objects = loaded['PCA_objs'].item()
+        self.split_half_pca_results = loaded['split_half_pca_results'].item()
         self.pca_results = loaded['PCA_results'].item()
         self.mds_results = loaded['MDS']
 
@@ -56,6 +58,7 @@ class DimsMap:
         output = {
             'PCA_objs': self.pca_objects,
             'PCA_results': self.pca_results,
+            'split_half_pca_results': self.split_half_pca_results,
             'MDS': self.mds_results,
         }
         output_path = path / 'DimsMap_results.npz'
@@ -64,6 +67,7 @@ class DimsMap:
     def compute_dims_analysis(self):
         """Perform rank analyses on all maps."""
         self._convert_data_array()
+        self._compute_split_half_pca()
         self._compute_pca()
         self._compute_mds()
         self.save_all(self.output_path)
@@ -78,6 +82,69 @@ class DimsMap:
                                                    self.map_var, self.map_tgt,
                                                    self.map_sep
                                                    )
+    
+
+    def _compute_split_half_pca(self) -> None:
+        """
+        Perform split-half PCA, Fit on Half subject, project on the second half 
+        and bootstrap 1000 combinations of 30 instances
+        """
+
+        n_conds, n_mets, n_subjs, n_imgs = self.human_arr.shape
+        half_subjs = int(n_subjs / 2)
+        split_idx_array = map_func.split_subj(n_subjs, self.n_bs, self.bs_seed)
+        fit_human = self.human_arr[:, :, split_idx_array[0, 0], :]
+        unfit_human = self.human_arr[:, :, split_idx_array[0, 1], :]
+        pca_objs = self.fit_pca(fit_human, self.n_comps, self.bs_seed, center=True)
+
+        human_proj, human_scaled = self._project(
+            data = unfit_human,
+            pca = pca_objs['pca'],
+            scaler = pca_objs['scaler'],
+            center = True
+        )
+        human_proj, human_scaled = human_proj[0], human_scaled[0]
+
+        model_proj = np.empty((self.n_bs, n_conds, n_mets, self.n_comps, half_subjs))
+        model_scaled = np.empty((self.n_bs, n_conds, n_mets, half_subjs, n_imgs))
+        for i in range(self.n_bs):
+            fit_model = self.model_arr[:, :, split_idx_array[i, 1], :]
+            bs_proj, bs_scaled = self._project(
+                data = fit_model,
+                pca = pca_objs['pca'],
+                scaler = pca_objs['scaler'],
+                center = True
+            )
+            model_proj[i, ...] = bs_proj[0]
+            model_scaled[i, ...] = bs_scaled[0]
+
+        # compute projected explained variance
+        human_proj_var = np.empty((n_conds, n_mets, self.n_comps))
+        model_proj_var = np.empty((self.n_bs, n_conds, n_mets, self.n_comps))
+        for bs in range(self.n_bs):
+            for cond in range(n_conds):
+                for met in range(n_mets):
+                    if bs == 0:  # compute human once
+                        human_proj_var[cond, met] = self.compute_var(
+                            data = human_scaled[cond, met],
+                            result = human_proj[cond, met],
+                        )
+                    model_proj_var[bs, cond, met] = self.compute_var(
+                        data = model_scaled[bs, cond, met],
+                        result = model_proj[bs, cond, met],
+                    )
+
+        # package output
+        self.split_half_pca_results = {"pca": pca_objs['pca'], 
+                                       "scaler": pca_objs['scaler'],
+                                       "human_proj": human_proj,
+                                       "human_scaled_data": human_scaled,
+                                       "proj_human_var": human_proj_var,
+                                       "model_proj": model_proj,
+                                       "model_scaled_data": model_scaled,
+                                       "proj_model_var": model_proj_var,
+                                       }
+
 
     def _compute_pca(self) -> None:
         """full PCA analysis pipeiline"""
@@ -160,12 +227,12 @@ class DimsMap:
         print(fig_path)
 
     @staticmethod
-    def _compute_var(data: np.ndarray, result: np.ndarray) -> np.ndarray:
+    def compute_var(data: np.ndarray, result: np.ndarray) -> np.ndarray:
         """ Compute explained variance for each component """
         return np.var(result, axis = 1) / np.sum(np.var(data, axis = 0))
 
     @staticmethod
-    def _scale_data(data: np.ndarray, 
+    def scale_data(data: np.ndarray, 
                     scaler: StandardScaler, 
                     cent: bool, 
                     shuffle: bool,
@@ -207,14 +274,14 @@ class DimsMap:
                 for k, proj in enumerate(proj_arr):
                     # get the projection results
                     scaler_objs = self.pca_objects.item()[center][pca_obj]['scaler']
-                    data = self._scale_data(proj_data_arr[k][i, j], scaler_objs[(i, j)],
+                    data = self.scale_data(proj_data_arr[k][i, j], scaler_objs[(i, j)],
                                             cent=(center == 'centered'),
                                             shuffle=shuffle_array[k]
                                             )
                     proj_results = self.pca_results.item()[center][pca_obj][proj]
 
                     # compute explained variance
-                    explained_variance = self._compute_var(data, proj_results[i, j])
+                    explained_variance = self.compute_var(data, proj_results[i, j])
 
                     if plot_type == 'cumulative':
                         # plot cumulative explained variance
@@ -258,6 +325,7 @@ class DimsMap:
             for j, pca_obj in enumerate(type_arr):
                 self._plot_pca_common(center, pca_obj, plot_type='cumulative')
                 self._plot_pca_common(center, pca_obj, plot_type='non-cumulative')
+    
 
     @staticmethod
     def fit_pca(arr:np.ndarray, 
@@ -377,18 +445,20 @@ class DimsMap:
             data = np.expand_dims(data, axis=0)
 
         # initate results
-        n_suffs = data.shape[0]
+        n_shuffs = data.shape[0]
         n_conds = data.shape[1]
         n_mets = data.shape[2]
         n_comps = pca[(0,0)].components_.shape[0]
         n_subjs = data.shape[3]
-        results = np.empty((n_suffs, n_conds, n_mets, n_comps, n_subjs))
+        results = np.empty((n_shuffs, n_conds, n_mets, n_comps, n_subjs))
+        scaled_data = np.empty((n_shuffs, n_conds, n_mets, n_subjs, data.shape[4]))
 
         # project
-        for i in range(n_suffs):
+        for i in range(n_shuffs):
             for j in range(n_conds):
                 for k in range(n_mets):
+                    scaled = scaler[(j,k)].transform(data[i,j,k,:,:])
                     results[i,j,k] = \
-                        pca[(j,k)].components_ @\
-                        scaler[(j,k)].transform(data[i,j,k,:,:]).T
-        return results
+                        pca[(j,k)].components_ @ scaled.T
+                    scaled_data[i,j,k] = scaled
+        return results, scaled_data

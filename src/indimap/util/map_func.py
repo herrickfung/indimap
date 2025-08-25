@@ -165,6 +165,31 @@ def split_arr(human: np.ndarray,
     return out_human, out_model
 
 
+def split_subj(n_subjs: int, 
+               n_bs: int,
+               seed: int = 42) -> np.ndarray:
+    """
+    Split subjects into two halves.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    n_subjs (int): Number of subjects.
+    seed (int): Random seed for reproducibility.
+    ---------------------------------------------------------------------------
+    Output: np.ndarray (shape: (n_bs, 2, half_subjs))
+    """
+
+    np.random.seed(seed)
+    all_indices = np.arange(n_subjs)
+    half_subjs = int(n_subjs / 2)
+    output_indices = np.empty((n_bs, 2, half_subjs), dtype=int)
+    for i in range(n_bs):
+        bs_indices = np.random.permutation(all_indices)
+        output_indices[i, 0, :] = bs_indices[:half_subjs]
+        output_indices[i, 1, :] = bs_indices[half_subjs:]
+    return output_indices
+
+
 def compute_full_corr_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     """
     Compute the full correlation matrix between two arrays.

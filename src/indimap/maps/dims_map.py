@@ -138,9 +138,7 @@ class DimsMap:
         self.split_half_pca_results = {"split_info": split_idx_array,
                                        "pca": pca_objs['pca'], 
                                        "scaler": pca_objs['scaler'],
-                                       "human_proj": human_proj,
                                        "proj_human_var": human_proj_var,
-                                       "model_proj": model_proj,
                                        "proj_model_var": model_proj_var,
                                        }
 

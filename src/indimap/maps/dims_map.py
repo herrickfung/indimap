@@ -48,16 +48,16 @@ class DimsMap:
     def load_all(self, path: str):
         """ Loads precomputed results from a file """
         loaded = np.load(path / 'DimsMap_results.npz', allow_pickle=True)
-        self.pca_objects = loaded['PCA_objs'].item()
-        self.pca_results = loaded['PCA_results'].item()
+        # self.pca_objects = loaded['PCA_objs'].item()
+        # self.pca_results = loaded['PCA_results'].item()
         self.mds_results = loaded['MDS']
         self.split_half_pca_results = loaded['SH_PCA'].item()
 
     def save_all(self, path: str):
         """ Save results to a file """
         output = {
-            'PCA_objs': self.pca_objects,
-            'PCA_results': self.pca_results,
+            # 'PCA_objs': self.pca_objects,
+            # 'PCA_results': self.pca_results,
             'MDS': self.mds_results,
             'SH_PCA': self.split_half_pca_results,
         }
@@ -68,7 +68,7 @@ class DimsMap:
         """Perform rank analyses on all maps."""
         self._convert_data_array()
         self._compute_split_half_pca()
-        self._compute_pca()
+        # self._compute_pca()
         self._compute_mds()
         self.save_all(self.output_path)
 
@@ -93,42 +93,56 @@ class DimsMap:
         n_conds, n_mets, n_subjs, n_imgs = self.human_arr.shape
         half_subjs = int(n_subjs / 2)
         split_idx_array = map_func.split_subj(n_subjs, self.n_bs, self.bs_seed)
+
         fit_human = self.human_arr[:, :, split_idx_array[0, 0], :]
         unfit_human = self.human_arr[:, :, split_idx_array[0, 1], :]
         pca_objs = self.fit_pca(fit_human, self.n_comps, self.bs_seed, center=True)
+        pca, scaler = pca_objs['pca'], pca_objs['scaler']
 
-        human_proj, human_scaled = self._project(
-            data = unfit_human,
-            pca = pca_objs['pca'],
-            scaler = pca_objs['scaler'],
-            center = True
-        )
-        human_proj, human_scaled = human_proj[0], human_scaled[0]
+        def project(data, **kwargs):
+            proj, scaled = self._project(data=data, pca=pca, scaler=scaler, **kwargs)
+            return proj[0], scaled[0]
+
+        same_human_proj, same_human_scaled = project(data = fit_human, center = True)
+        diff_human_proj, diff_human_scaled = project(data = unfit_human, center = True)
 
         model_proj = np.empty((self.n_bs, n_conds, n_mets, self.n_comps, half_subjs))
         model_scaled = np.empty((self.n_bs, n_conds, n_mets, half_subjs, n_imgs))
         for i in range(self.n_bs):
             fit_model = self.model_arr[:, :, split_idx_array[i, 1], :]
-            bs_proj, bs_scaled = self._project(
+            model_proj[i], model_scaled[i] = project(
                 data = fit_model,
-                pca = pca_objs['pca'],
-                scaler = pca_objs['scaler'],
-                center = True
+                center=True
             )
-            model_proj[i, ...] = bs_proj[0]
-            model_scaled[i, ...] = bs_scaled[0]
+
+        scrm_human_proj = np.empty((self.n_bs, n_conds, n_mets, self.n_comps, half_subjs))
+        scrm_human_scaled = np.empty((self.n_bs, n_conds, n_mets, half_subjs, n_imgs))
+        scrm_human_proj, scrm_human_scaled = self._project(
+            data = fit_human, pca = pca, scaler = scaler,
+            center = True, shuffle = True, iter = self.n_bs
+        )
 
         # compute projected explained variance
-        human_proj_var = np.empty((n_conds, n_mets, self.n_comps))
+        same_human_proj_var = np.empty((n_conds, n_mets, self.n_comps))
+        diff_human_proj_var = np.empty((n_conds, n_mets, self.n_comps))
+        scrm_human_proj_var = np.empty((self.n_bs, n_conds, n_mets, self.n_comps))
         model_proj_var = np.empty((self.n_bs, n_conds, n_mets, self.n_comps))
         for bs in range(self.n_bs):
             for cond in range(n_conds):
                 for met in range(n_mets):
                     if bs == 0:  # compute human once
-                        human_proj_var[cond, met] = self.compute_var(
-                            data = human_scaled[cond, met],
-                            result = human_proj[cond, met],
+                        same_human_proj_var[cond, met] = self.compute_var(
+                            data = same_human_scaled[cond, met],
+                            result = same_human_proj[cond, met],
                         )
+                        diff_human_proj_var[cond, met] = self.compute_var(
+                            data = diff_human_scaled[cond, met],
+                            result = diff_human_proj[cond, met],
+                        )
+                    scrm_human_proj_var[bs, cond, met] = self.compute_var(
+                        data = scrm_human_scaled[bs, cond, met],
+                        result = scrm_human_proj[bs, cond, met],
+                    )
                     model_proj_var[bs, cond, met] = self.compute_var(
                         data = model_scaled[bs, cond, met],
                         result = model_proj[bs, cond, met],
@@ -136,9 +150,11 @@ class DimsMap:
 
         # package output
         self.split_half_pca_results = {"split_info": split_idx_array,
-                                       "pca": pca_objs['pca'], 
-                                       "scaler": pca_objs['scaler'],
-                                       "proj_human_var": human_proj_var,
+                                       "pca": pca,
+                                       "scaler": scaler,
+                                       "proj_same_human_var": same_human_proj_var,
+                                       "proj_diff_human_var": diff_human_proj_var,
+                                       "proj_scrm_human_var": scrm_human_proj_var,
                                        "proj_model_var": model_proj_var,
                                        }
 

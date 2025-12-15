@@ -89,7 +89,7 @@ def check_for_extreme(human: np.ndarray, model: np.ndarray) -> None:
         raise ValueError(f"Instances {extreme_model} is achieving 99% or 1% accuracy, remove this instance")
 
 
-def split_half(human: np.ndarray, model: np.ndarray) -> tuple:
+def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     """
     Recursive function to split the data into two halves.
     Ensure that no split contains only one unique value (failed to correlate).
@@ -123,7 +123,63 @@ def split_half(human: np.ndarray, model: np.ndarray) -> tuple:
                     break
 
     if resplit:
-        return split_half(human, model)
+        return random_split_half(human, model)
+    else:
+        return chosen, unchosen
+
+
+def stratified_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
+    """
+    Split the last axis of human and model arrays in blocks of 40,
+    randomly selecting 20 indices per block, while ensuring no degenerate splits.
+
+    Parameters
+    ----------
+    human : np.ndarray
+        Human data array, shape (..., n_images)
+    model : np.ndarray
+        Model data array, shape (..., n_images)
+
+    Returns
+    -------
+    tuple
+        Two arrays of indices: (chosen, unchosen)
+    """
+    n_images = human.shape[-1]
+    block_size = 40
+    select_per_block = 20
+    chosen = []
+
+    for start in range(0, n_images, block_size):
+        block_indices = np.arange(start, min(start + block_size, n_images))
+        # randomly pick 20 from this block
+        chosen_block = np.random.choice(block_indices, size=select_per_block, replace=False)
+        chosen.extend(chosen_block)
+
+    chosen = np.array(chosen)
+    unchosen = np.setdiff1d(np.arange(n_images), chosen)
+
+    # Optional: check for degenerate splits (like before)
+    resplit = False
+    for i in range(human.shape[0]):
+        for j in range(human.shape[1]):
+            for k in range(human.shape[2]):
+                check_split = [
+                    len(np.unique(human[i,j,k,chosen])),
+                    len(np.unique(human[i,j,k,unchosen])),
+                    len(np.unique(model[i,j,k,chosen])),
+                    len(np.unique(model[i,j,k,unchosen])),
+                ]
+                if 1 in check_split:
+                    resplit = True
+                    break
+            if resplit:
+                break
+        if resplit:
+            break
+
+    if resplit:
+        return stratified_split_half(human, model)
     else:
         return chosen, unchosen
 
@@ -156,7 +212,7 @@ def split_arr(human: np.ndarray,
                           ))
 
     for i in range(n_bs):
-        chosen, unchosen = split_half(human, model)
+        chosen, unchosen = random_split_half(human, model)
         out_human[i, 0, :, :, :, :] = human[:, :, :, chosen]
         out_human[i, 1, :, :, :, :] = human[:, :, :, unchosen]
         out_model[i, 0, :, :, :, :] = model[:, :, :, chosen]

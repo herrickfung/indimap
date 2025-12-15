@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import curve_fit
 
 
 def r2z(r: np.ndarray, metric: str) -> np.ndarray:
@@ -21,3 +22,18 @@ def z2r(z: np.ndarray, metric: str) -> np.ndarray:
     return result
 
 
+def exponential_func(x, a, b):
+    """Exponential function for curve fitting."""
+    return a * np.exp(b * x)
+
+
+def fit_expo(data):
+    x = np.arange(len(data))
+    y = np.array(data)
+
+    try: 
+        popt, _ = curve_fit(exponential_func, x, y, p0=(1, 0.01), maxfev=10000)
+        a, b = popt
+        return a, b
+    except RuntimeError:
+        return None, None

@@ -96,12 +96,15 @@ class TopMap:
         else:
             ct_btw_var_results = None
             corr_btw_var_results = None
+        
+        expo_slope_results = self.expo_slope_analysis(self.top_ct[key])
 
         return {
             "ct_btw_split": ct_btw_split_results,
             "corr_btw_split": corr_btw_split_results,
             "ct_btw_var": ct_btw_var_results,
-            "corr_btw_var": corr_btw_var_results
+            "corr_btw_var": corr_btw_var_results,
+            "expo_slope": expo_slope_results,
         }
 
     def plot_top_average(self) -> None:
@@ -347,6 +350,32 @@ class TopMap:
         results = stat_func.r2z(results, 'pearson')
         results = np.mean(results, axis=1)
         results = stat_func.z2r(results, 'pearson')
+
+        return results
+    
+    @staticmethod
+    def expo_slope_analysis(data: np.ndarray) -> dict:
+        """
+        perform exponential slope analysis on count distribution of subj/inst
+        ---------------------------------------------------------------------------
+        Parameters:
+        ---------------------------------------------------------------------------
+        data (np.ndarray): The input data array with shape
+        [bootstrap, split, metrics, count/corr].
+        output: (np.ndarray): array [repetition, metrics, intercept/slope]
+        """
+
+        data = einops.rearrange(data, 'boot split met value -> (boot split) met value')
+        results = np.empty(shape = (data.shape[0], data.shape[1], 2))
+
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                data_to_fit = data[i,j]
+                data_to_fit = data_to_fit[~np.isnan(data_to_fit)]
+                data_to_fit = data_to_fit / len(data_to_fit)
+                data_to_fit = np.sort(data_to_fit)[::-1]
+                intercept, slope = stat_func.fit_expo(data_to_fit)
+                results[i,j] = [intercept, slope]
 
         return results
 

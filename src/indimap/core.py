@@ -413,6 +413,31 @@ Graph path:                     {self.graph_path}
                 ).get(f"{corr_on}_btw_{btw}", None)
         )
 
+    def get_top_expo(self, map_from: str, map_to: str):
+        """
+        Retrieve the top map exponential count distributuion results
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+
+        Returns:
+        Slope and intercept of the exponential distribution fit for each metric
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The result matrix if it exists, 
+              otherwise None.
+        """
+
+        TopExpo = namedtuple("TopExpo", ["dims", "mat"])
+        return TopExpo(
+            dims=(
+            "Dimensions: repetitions x metrics x intercept/slope"
+            ),
+            mat=self.top_map.top_results.get(f"{map_from}_to_{map_to}", {}
+            ).get('expo_slope', None)
+        )
+
     def get_mds(self):
         """
         Retrieve the results of the Multi-Dimensional Scaling (MDS) analysis.

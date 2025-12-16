@@ -35,6 +35,8 @@ class IndiMap:
                 Variables to map/correlate together (e.g., image_index, stimulus).
             map_separate : list of str, optional
                 Variables to map/correlate separately. The resulting map will be averaged after mapping.
+            map_confusion: bool
+                Whether to compute and compare confusion matrix (default: False).
             bootstrap_iterations : int, optional
                 Number of bootstrap iterations (default: 1000).
             bootstrap_seed : int, optional
@@ -53,6 +55,7 @@ class IndiMap:
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
             'map_variables': ['acc', 'conf'],
+            'map_confusion': False,
             'bootstrap_iterations': 1000,
             'bootstrap_seed': 42,
             'nComp_PCA': 10,
@@ -71,6 +74,7 @@ class IndiMap:
         self.map_var = self.config.get('map_variables')
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
+        self.map_confusion = self.config.get('map_confusion')
         self.n_bs = self.config['bootstrap_iterations']
         self.bs_seed = self.config['bootstrap_seed']
         self.n_comps = self.config['nComp_PCA']
@@ -105,6 +109,7 @@ Number of Images:               {self.n_imgs}
 Mapping variables:              {self.map_var}
 Mapping together:               {self.map_tgt}
 Mapping separately:             {self.map_sep}
+Map confusion matrix:           {self.map_confusion}
 Bootstrap iterations:           {self.n_bs}
 Bootstrap random seed:          {self.bs_seed}
 Number of components (PCA):     {self.n_comps}

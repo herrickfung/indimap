@@ -27,10 +27,14 @@ class CorrMap:
         self.map_var = self.config.get('map_variables')
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
+        self.map_confusion = self.config.get('map_confusion')
         self.n_bs = self.config.get('bootstrap_iterations')
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
         self.graph_path = Path(self.config['graph_path'])
+
+        if self.map_confusion:
+            self.map_var.append('confuse_mat')
 
         self.corr_maps = {
             'subj_to_inst': None,
@@ -80,11 +84,11 @@ class CorrMap:
         """pipeline from raw data to correlation maps."""
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
-                                              self.map_sep
+                                              self.map_sep, self.map_confusion
                                               )
         model_arr = map_func.convert_to_array(self.model, self.model_iden,
                                               self.map_var, self.map_tgt,
-                                              self.map_sep
+                                              self.map_sep, self.map_confusion
                                               )
         map_func.check_for_extreme(human_arr, model_arr)
         human_split, model_split = map_func.split_arr(human_arr,
@@ -93,9 +97,9 @@ class CorrMap:
                                                       self.bs_seed
                                                       )
         self.corr_maps = {
-            'subj_to_inst': map_func.mapping_matrix(human_split, model_split),
-            'subj_to_subj': map_func.mapping_matrix(human_split, human_split),
-            'inst_to_inst': map_func.mapping_matrix(model_split, model_split),
+            'subj_to_inst': map_func.mapping_matrix(human_split, model_split, self.map_var, False),
+            'subj_to_subj': map_func.mapping_matrix(human_split, human_split, self.map_var, True),
+            'inst_to_inst': map_func.mapping_matrix(model_split, model_split, self.map_var, True),
         }
 
     def compute_corr_analysis(self) -> None:

@@ -5,11 +5,33 @@ import pandas as pd
 from . import stat_func
 
 
+def append_confusion_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    This will compute per row confusion matrix and append it to the dataframe
+    """
+
+    # infer categories from union stim/resp
+    categories = sorted(set(df['stim'].dropna()) | set(df['resp'].dropna()))
+    label_to_idx = {cat: i for i, cat in enumerate(categories)}
+    n_types = len(categories)
+    df['confuse_mat'] = [np.zeros((n_types, n_types), dtype=float) for _ in range(len(df))]
+
+    for i, row in df.iterrows():
+        confusion_matrix = np.zeros((n_types, n_types))
+        if not pd.isna(row['stim']) and not pd.isna(row['resp']):
+            stim_idx = label_to_idx[row['stim']]
+            resp_idx = label_to_idx[row['resp']]
+            confusion_matrix[stim_idx, resp_idx] += 1
+            df.at[i, 'confuse_mat'] = confusion_matrix
+    return df
+
+
 def convert_to_array(df: pd.DataFrame, 
                      subj_name: str, 
                      var_name: str,
                      tgt_name: str, 
                      sep_name: str,
+                     compute_confusion: bool = False
                      ) -> np.ndarray:
     """
     Convert dataframe to numpy array.
@@ -24,9 +46,25 @@ def convert_to_array(df: pd.DataFrame,
     ---------------------------------------------------------------------------
     """
 
+    if compute_confusion:
+        df = append_confusion_matrix(df)
+        agg_dict = {col: 'mean' for col in df.select_dtypes(include='number').columns}
+        agg_dict['confuse_mat'] = lambda x: sum(x)
+
+        df = (
+            df.groupby([subj_name, sep_name, tgt_name], as_index=False)
+            .agg(agg_dict)
+            .reset_index()
+            )
+    else:
+        df = (
+            df.groupby([subj_name, sep_name, tgt_name], as_index=False)
+            .mean(numeric_only=True)
+            .reset_index()
+        )
+
     subjs = np.sort(df[subj_name].unique())
     seps = np.sort(df[sep_name].unique())
-
     n_subjs = len(subjs)
     n_vars = len(var_name)
     n_seps = len(seps)
@@ -39,7 +77,12 @@ def convert_to_array(df: pd.DataFrame,
         if cond_n_imgs > n_imgs:
             n_imgs = cond_n_imgs
 
-    output = np.zeros((n_seps, n_vars, n_subjs, n_imgs))
+    if compute_confusion:
+        cm_index = var_name.index('confuse_mat')
+        n_cm = df['confuse_mat'].values[0].size
+        output = np.zeros((n_seps, n_vars, n_subjs, n_imgs, n_cm))
+    else:
+        output = np.zeros((n_seps, n_vars, n_subjs, n_imgs, 1))
 
     for i, cond in enumerate(seps):
         cond_data = df[df[sep_name] == cond]
@@ -50,11 +93,16 @@ def convert_to_array(df: pd.DataFrame,
                 for m, img in enumerate(imgs):
                     if img in subj_data[tgt_name].values:
                         img_data = subj_data[subj_data[tgt_name] == img]
-                        output[i,j,k,m] = img_data[metric].values[0]
+                        if metric != 'confuse_mat':
+                            output[i,j,k,m] = img_data[metric].values[0]
+                        else:
+                            cm = sum(img_data['confuse_mat'].values)
+                            output[i,j,k,m] = cm.flatten()
                     else:
                         output[i,j,k,m] = np.nan
-            imputer = SimpleImputer(strategy='mean')
-            output[i,j,:,:] = imputer.fit_transform(output[i,j,:,:])
+            if metric != 'confuse_mat':
+                imputer = SimpleImputer(strategy='mean')
+                output[i,j,:,:,0] = imputer.fit_transform(output[i,j,:,:,0])
 
     return output
 
@@ -71,8 +119,8 @@ def check_for_extreme(human: np.ndarray, model: np.ndarray) -> None:
     ---------------------------------------------------------------------------
     """
 
-    human_flag_crit = np.mean(human[:, 0, :, :], axis=-1)
-    model_flag_crit = np.mean(model[:, 0, :, :], axis=-1)
+    human_flag_crit = np.mean(human[:, 0, :, :], axis=-2)
+    model_flag_crit = np.mean(model[:, 0, :, :], axis=-2)
 
     flag_human = np.where((human_flag_crit > 0.95) | (human_flag_crit < 0.05))[1]
     flag_model = np.where((model_flag_crit > 0.95) | (model_flag_crit < 0.05))[1]
@@ -104,7 +152,7 @@ def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     """
 
     resplit = False
-    img_axis = human.shape[-1]
+    img_axis = human.shape[-2]
     all_indices = np.arange(img_axis)
 
     chosen = np.random.choice(img_axis, int(img_axis/2), replace=False)
@@ -202,21 +250,29 @@ def split_arr(human: np.ndarray,
     """
 
     np.random.seed(seed)
-    img_axis = human.shape[-1]
+    img_axis = human.shape[-2]
     all_indices = np.arange(img_axis)
-    out_human = np.zeros((n_bs, 2, human.shape[0], human.shape[1], 
-                          human.shape[2], int(human.shape[-1]/2)
+    out_human = np.zeros((n_bs, 2, 
+                          human.shape[0], 
+                          human.shape[1], 
+                          human.shape[2], 
+                          int(human.shape[-2]/2), 
+                          human.shape[-1]
                           ))
-    out_model = np.zeros((n_bs, 2, model.shape[0], model.shape[1], 
-                          model.shape[2], int(model.shape[-1]/2)
+    out_model = np.zeros((n_bs, 2, 
+                          model.shape[0], 
+                          model.shape[1], 
+                          model.shape[2], 
+                          int(model.shape[-2]/2),
+                          model.shape[-1]
                           ))
-
+    
     for i in range(n_bs):
         chosen, unchosen = random_split_half(human, model)
-        out_human[i, 0, :, :, :, :] = human[:, :, :, chosen]
-        out_human[i, 1, :, :, :, :] = human[:, :, :, unchosen]
-        out_model[i, 0, :, :, :, :] = model[:, :, :, chosen]
-        out_model[i, 1, :, :, :, :] = model[:, :, :, unchosen]
+        out_human[i, 0, :, :, :, :] = human[:, :, :, chosen, :]
+        out_human[i, 1, :, :, :, :] = human[:, :, :, unchosen, :]
+        out_model[i, 0, :, :, :, :] = model[:, :, :, chosen, :]
+        out_model[i, 1, :, :, :, :] = model[:, :, :, unchosen, :]
 
     return out_human, out_model
 
@@ -264,7 +320,25 @@ def compute_full_corr_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     return corr_matrix
 
 
-def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
+def compute_full_corr_confusion(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
+    """
+    Compute the full correlation matrix between two confusion matrices.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    arr1 (np.ndarray): The first input array. (subj, image, confusion matrix)
+    arr2 (np.ndarray): The second input array (subj, image, confusion matrix).
+    ---------------------------------------------------------------------------
+    """
+
+    # sum across images and normalize to percentage before computing full corr matrix
+    arr1 = np.nansum(arr1, axis = 1) / np.nansum(arr1, axis = (1,2))[:, None]
+    arr2 = np.nansum(arr2, axis = 1) / np.nansum(arr2, axis = (1,2))[:, None]
+    corr_matrix = compute_full_corr_matrix(arr1, arr2)
+    return corr_matrix
+
+
+def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray, map_var: list, same: bool) -> np.ndarray:
     """
     Compute the full correlation matrix between two sets of raw data.
     ---------------------------------------------------------------------------
@@ -281,8 +355,11 @@ def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     5. Image
     """
 
-    # check arr1 and arr2 to see if they are exactly the same
-    same = np.array_equal(arr1, arr2)
+    # check arr1 and arr2 to see if they are exactly the same, ignore confusion matrix
+    if 'confuse_mat' in map_var:
+        cm_idx = map_var.index('confuse_mat')
+    else:
+        cm_idx = -1
 
     assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
@@ -301,7 +378,13 @@ def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
         for j in range(arr1.shape[1]):
             for k in range(arr1.shape[2]):
                 for l in range(arr1.shape[3]):
-                    result = compute_full_corr_matrix(arr1[i, j, k, l], arr2[i, j, k, l])
+                    if l == cm_idx:
+                        result = compute_full_corr_confusion(arr1[i, j, k, l, :, :, :], 
+                                                          arr2[i, j, k, l, :, :, :])
+                    else:
+                        result = compute_full_corr_matrix(arr1[i, j, k, l, :, :, 0], 
+                                                          arr2[i, j, k, l, :, :, 0]
+                                                          )
 
                     if same:
                         np.fill_diagonal(result, np.nan)

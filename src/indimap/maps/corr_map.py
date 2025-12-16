@@ -24,7 +24,7 @@ class CorrMap:
         self.model = self.config.get('inst_data')
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
-        self.map_var = self.config.get('map_variables')
+        self.map_var = list(self.config.get('map_variables'))
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
         self.map_confusion = self.config.get('map_confusion')
@@ -33,7 +33,7 @@ class CorrMap:
         self.output_path = Path(self.config['output_path'])
         self.graph_path = Path(self.config['graph_path'])
 
-        if self.map_confusion:
+        if self.map_confusion and 'confuse_mat' not in self.map_var:
             self.map_var.append('confuse_mat')
 
         self.corr_maps = {
@@ -91,15 +91,20 @@ class CorrMap:
                                               self.map_sep, self.map_confusion
                                               )
         map_func.check_for_extreme(human_arr, model_arr)
-        human_split, model_split = map_func.split_arr(human_arr,
-                                                      model_arr,
-                                                      self.n_bs,
-                                                      self.bs_seed
-                                                      )
+
         self.corr_maps = {
-            'subj_to_inst': map_func.mapping_matrix(human_split, model_split, self.map_var, False),
-            'subj_to_subj': map_func.mapping_matrix(human_split, human_split, self.map_var, True),
-            'inst_to_inst': map_func.mapping_matrix(model_split, model_split, self.map_var, True),
+            'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 
+                                                    self.map_var, same=False,
+                                                    n_bs = self.n_bs, seed=self.bs_seed
+                                                    ),
+            'subj_to_subj': map_func.mapping_matrix(human_arr, human_arr, 
+                                                    self.map_var, same=True,
+                                                    n_bs = self.n_bs, seed=self.bs_seed
+                                                    ),
+            'inst_to_inst': map_func.mapping_matrix(model_arr, model_arr, 
+                                                    self.map_var, same=True,
+                                                    n_bs = self.n_bs, seed=self.bs_seed
+                                                    ),
         }
 
     def compute_corr_analysis(self) -> None:

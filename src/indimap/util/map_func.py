@@ -14,15 +14,21 @@ def append_confusion_matrix(df: pd.DataFrame) -> pd.DataFrame:
     categories = sorted(set(df['stim'].dropna()) | set(df['resp'].dropna()))
     label_to_idx = {cat: i for i, cat in enumerate(categories)}
     n_types = len(categories)
-    df['confuse_mat'] = [np.zeros((n_types, n_types), dtype=float) for _ in range(len(df))]
+    confuse_mats = np.zeros((len(df), n_types, n_types), dtype=int)
 
-    for i, row in df.iterrows():
-        confusion_matrix = np.zeros((n_types, n_types))
-        if not pd.isna(row['stim']) and not pd.isna(row['resp']):
-            stim_idx = label_to_idx[row['stim']]
-            resp_idx = label_to_idx[row['resp']]
-            confusion_matrix[stim_idx, resp_idx] += 1
-            df.at[i, 'confuse_mat'] = confusion_matrix
+    valid = df['stim'].notna() & df['resp'].notna()
+    stim_idx = df.loc[valid, 'stim'].map(label_to_idx).to_numpy()
+    resp_idx = df.loc[valid, 'resp'].map(label_to_idx).to_numpy()
+    row_idx = np.where(valid)[0]
+    confuse_mats[row_idx, stim_idx, resp_idx] = 1
+    df['confuse_mat'] = list(confuse_mats)
+    # for i, row in df.iterrows():
+    #     confusion_matrix = np.zeros((n_types, n_types))
+    #     if not pd.isna(row['stim']) and not pd.isna(row['resp']):
+    #         stim_idx = label_to_idx[row['stim']]
+    #         resp_idx = label_to_idx[row['resp']]
+    #         confusion_matrix[stim_idx, resp_idx] += 1
+    #         df.at[i, 'confuse_mat'] = confusion_matrix
     return df
 
 
@@ -145,7 +151,7 @@ def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     ---------------------------------------------------------------------------
     Parameters:
     ---------------------------------------------------------------------------
-    human (np.ndarray): The human data array.
+    human (np.ndarray): The human data array (cond, metrics, subj, image, confusion).
     model (np.ndarray): The model data array.
     img (int): Image index to split.
     ---------------------------------------------------------------------------
@@ -158,17 +164,17 @@ def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     chosen = np.random.choice(img_axis, int(img_axis/2), replace=False)
     unchosen = np.setdiff1d(all_indices, chosen)
     for i in range(human.shape[0]):
-        for j in range(human.shape[1]):
-            for k in range(human.shape[2]):
-                check_split = [
-                    len(np.unique(human[i,j,k,chosen])),
-                    len(np.unique(human[i,j,k,unchosen])),
-                    len(np.unique(model[i,j,k,chosen])),
-                    len(np.unique(model[i,j,k,unchosen])),
-                ]
-                if 1 in check_split:
-                    resplit = True
-                    break
+        for k in range(human.shape[2]):
+            check_split = [
+                len(np.unique(human[i,0,k,chosen,0])),
+                len(np.unique(human[i,0,k,unchosen,0])),
+                len(np.unique(model[i,0,k,chosen,0])),
+                len(np.unique(model[i,0,k,unchosen,0])),
+            ]
+            if 1 in check_split:
+                print('Resplit')
+                resplit = True
+                break
 
     if resplit:
         return random_split_half(human, model)
@@ -232,11 +238,11 @@ def stratified_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
         return chosen, unchosen
 
 
-def split_arr(human: np.ndarray, 
-              model: np.ndarray, 
-              n_bs: int, 
-              seed: int = 42,
-              ) -> tuple:
+def split_image_array(arr1: np.ndarray, 
+                      arr2: np.ndarray, 
+                      n_bs: int, 
+                      seed: int = 42,
+                      ) -> tuple:
     """
     Split array into train and test sets.
     ---------------------------------------------------------------------------
@@ -250,31 +256,12 @@ def split_arr(human: np.ndarray,
     """
 
     np.random.seed(seed)
-    img_axis = human.shape[-2]
+    img_axis = arr1.shape[-2]
     all_indices = np.arange(img_axis)
-    out_human = np.zeros((n_bs, 2, 
-                          human.shape[0], 
-                          human.shape[1], 
-                          human.shape[2], 
-                          int(human.shape[-2]/2), 
-                          human.shape[-1]
-                          ))
-    out_model = np.zeros((n_bs, 2, 
-                          model.shape[0], 
-                          model.shape[1], 
-                          model.shape[2], 
-                          int(model.shape[-2]/2),
-                          model.shape[-1]
-                          ))
     
-    for i in range(n_bs):
-        chosen, unchosen = random_split_half(human, model)
-        out_human[i, 0, :, :, :, :] = human[:, :, :, chosen, :]
-        out_human[i, 1, :, :, :, :] = human[:, :, :, unchosen, :]
-        out_model[i, 0, :, :, :, :] = model[:, :, :, chosen, :]
-        out_model[i, 1, :, :, :, :] = model[:, :, :, unchosen, :]
-
-    return out_human, out_model
+    for _ in range(n_bs):
+        chosen, unchosen = random_split_half(arr1, arr2)
+        yield chosen, unchosen
 
 
 def split_subj(n_subjs: int, 
@@ -338,7 +325,13 @@ def compute_full_corr_confusion(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarra
     return corr_matrix
 
 
-def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray, map_var: list, same: bool) -> np.ndarray:
+def mapping_matrix(arr1: np.ndarray, 
+                   arr2: np.ndarray, 
+                   map_var: list, 
+                   same: bool,
+                   n_bs: int = 1,
+                   seed: int = 42,
+                   ) -> np.ndarray:
     """
     Compute the full correlation matrix between two sets of raw data.
     ---------------------------------------------------------------------------
@@ -355,7 +348,6 @@ def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray, map_var: list, same: bool
     5. Image
     """
 
-    # check arr1 and arr2 to see if they are exactly the same, ignore confusion matrix
     if 'confuse_mat' in map_var:
         cm_idx = map_var.index('confuse_mat')
     else:
@@ -364,32 +356,35 @@ def mapping_matrix(arr1: np.ndarray, arr2: np.ndarray, map_var: list, same: bool
     assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
     if same:
-        output = np.zeros((arr1.shape[0], arr1.shape[1], 
-                           arr1.shape[2], arr1.shape[3], 
-                           arr1.shape[4], arr1.shape[4] - 1
+        output = np.zeros((n_bs, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[2] - 1
                            ))
     else:
-        output = np.zeros((arr1.shape[0], arr1.shape[1], 
-                           arr1.shape[2], arr1.shape[3], 
-                           arr1.shape[4], arr1.shape[4]
+        output = np.zeros((n_bs, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[2]
                            ))
 
-    for i in range(arr1.shape[0]):
-        for j in range(arr1.shape[1]):
-            for k in range(arr1.shape[2]):
-                for l in range(arr1.shape[3]):
+    for i, (split1, split2) in enumerate(split_image_array(arr1, arr2, n_bs, seed)):
+        for j, idx in enumerate([split1, split2]):
+            for k in range(arr1.shape[0]):
+                for l in range(arr1.shape[1]):
                     if l == cm_idx:
-                        result = compute_full_corr_confusion(arr1[i, j, k, l, :, :, :], 
-                                                          arr2[i, j, k, l, :, :, :])
+                        result = compute_full_corr_confusion(
+                            np.take(arr1[k, l, :, :, :], idx, axis = 1),
+                            np.take(arr2[k, l, :, :, :], idx, axis = 1),
+                            )
                     else:
-                        result = compute_full_corr_matrix(arr1[i, j, k, l, :, :, 0], 
-                                                          arr2[i, j, k, l, :, :, 0]
-                                                          )
+                        result = compute_full_corr_matrix(
+                            np.take(arr1[k, l, :, :, 0], idx, axis = 1),
+                            np.take(arr2[k, l, :, :, 0], idx, axis = 1),
+                            )
 
                     if same:
                         np.fill_diagonal(result, np.nan)
                         result = result[~np.isnan(result)]
-                        result = result.reshape(arr1.shape[4], arr1.shape[4]-1)
+                        result = result.reshape(arr1.shape[2], arr1.shape[2]-1)
 
                     output[i,j,k,l,:,:] = result
 

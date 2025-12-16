@@ -77,11 +77,11 @@ class DimsMap:
         self.human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                                    self.map_var, self.map_tgt,
                                                    self.map_sep
-                                                   )
+                                                   )[..., 0]
         self.model_arr = map_func.convert_to_array(self.model, self.model_iden,
                                                    self.map_var, self.map_tgt,
                                                    self.map_sep
-                                                   )
+                                                   )[..., 0]
     
 
     def _compute_split_half_pca(self) -> None:

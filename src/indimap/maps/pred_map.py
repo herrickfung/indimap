@@ -42,7 +42,7 @@ class PredMap:
         # initialize output
         met_type = ['within', 'across']
         sources = ['subj', 'inst']
-        methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
+        methods = ['rand', 'avg', 'corr']
         self.pred_results = {
             met: {
             source: {
@@ -84,7 +84,6 @@ class PredMap:
                 self.pred_from_rand(met, source)
                 self.pred_from_avg(met, source)
                 self.pred_from_corr(met, source)
-                self.pred_from_fit(met, source)
 
     def compute_corr_map(self):
         """ Load CorrMap object """
@@ -111,18 +110,23 @@ class PredMap:
                                               )
         map_func.check_for_extreme(human_arr, model_arr)
 
-        human_split, model_split = map_func.split_arr(human_arr,
-                                                      model_arr,
-                                                      self.n_bs,
-                                                      self.bs_seed
-                                                      )
+        image_splits = np.empty(shape=(self.n_bs, 2, int(human_arr.shape[-2]/2)))
+        for i, (split1, split2) in enumerate(map_func.split_image_array(
+            human_arr,
+            model_arr,
+            self.n_bs,
+            self.bs_seed
+        )):
+            image_splits[i, 0] = split1
+            image_splits[i, 1] = split2
 
-        human_split = np.nanmean(human_split, axis = 2)  # average across conditions.
-        model_split = np.nanmean(model_split, axis = 2)  # average across conditions.
+        # average across conditions
+        human_arr = human_arr.mean(axis=0)
+        model_arr = model_arr.mean(axis=0)
 
-        self.split_raw_mat = {  # for rand, avg, corr
-            'subj': human_split,
-            'inst': model_split
+        self.image_split = {  # for rand, avg, corr
+            'train': image_splits[:, 0, :],
+            'test': image_splits[:, 1, :]
         }
         self.raw_mat = {   # for ensemble fitting
             'subj': human_arr,
@@ -136,29 +140,31 @@ class PredMap:
         either within or across metric of the target subject
         """
 
-        # select only the second split 
-        X = self.split_raw_mat[source][:, 1, :, :, :]
-        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
+        X = self.raw_mat[source]
+        Y = self.raw_mat['subj']
+        n_met, n_subjs, _, _ = Y.shape
 
         # handle within and across metric prediction
-        n_bs, n_met, n_subjs, _ = Y.shape
+
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)]  # this allow shared logic
-            output = np.empty((n_bs, n_met, n_subjs))
+            output = np.empty((self.n_bs, n_met, n_subjs))
         else:
             met_pairs = list(permutations(range(n_met), 2))
             n_met_pairs = len(met_pairs)
-            output = np.empty((n_bs, n_met_pairs, n_subjs))
+            output = np.empty((self.n_bs, n_met_pairs, n_subjs))
 
         # prediction and evaluation loop
         np.random.seed(self.bs_seed)
-        for bs in range(n_bs):
+        for bs in range(self.n_bs):
+            bs_img_split = self.image_split['test'][bs].astype(int)
             for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
                     rand_subj = np.random.choice(other_subjs)
-                    x = X[bs, met_a, rand_subj, :]
-                    y = Y[bs, met_b, subj, :]
+
+                    x = X[met_a, rand_subj, bs_img_split, 0]
+                    y = Y[met_b, subj, bs_img_split, 0]
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
         self.pred_results[within][source]['rand'] = output
@@ -168,26 +174,25 @@ class PredMap:
         Take the average of all other subjects/instances to predict
         """
 
-        # select only the second split
-        X = self.split_raw_mat[source][:, 1, :, :, :]
-        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
-
         # handle within and across metric prediction
-        n_bs, n_met, n_subjs, _ = Y.shape
+        n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)] 
-            output = np.empty((n_bs, n_met, n_subjs))
+            output = np.empty((self.n_bs, n_met, n_subjs))
         else:
             met_pairs = list(permutations(range(n_met), 2))
             n_met_pairs = len(met_pairs)
-            output = np.empty((n_bs, n_met_pairs, n_subjs))
+            output = np.empty((self.n_bs, n_met_pairs, n_subjs))
 
-        for bs in range(n_bs):
+        for bs in range(self.n_bs):
+            bs_img_split = self.image_split['test'][bs].astype(int)
+            X = self.raw_mat[source][:, :, bs_img_split, 0]
+            Y = self.raw_mat['subj'][:, :, bs_img_split, 0]
             for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = np.nanmean(X[bs, met_a, other_subjs, :], axis=0)
-                    y = Y[bs, met_b, subj, :]
+                    x = np.nanmean(X[met_a, other_subjs], axis=0)
+                    y = Y[met_b, subj]
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
         self.pred_results[within][source]['avg'] = output
@@ -197,30 +202,30 @@ class PredMap:
         Use the correlation map as weight to predict the target subject/instance
         """
 
-        # select only the second split for data
-        X = self.split_raw_mat[source][:, 1, :, :, :]
-        Y = self.split_raw_mat['subj'][:, 1, :, :, :]
         # get weight from corr map first split
         W = self.corr_map[source][:, 0, :, :, :]
 
         # handle within and across metric prediction
-        n_bs, n_met, n_subjs, _ = Y.shape
+        n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)] 
-            output = np.empty((n_bs, n_met, n_subjs))
+            output = np.empty((self.n_bs, n_met, n_subjs))
         else:
             met_pairs = list(permutations(range(n_met), 2))
             n_met_pairs = len(met_pairs)
-            output = np.empty((n_bs, n_met_pairs, n_subjs))
+            output = np.empty((self.n_bs, n_met_pairs, n_subjs))
 
-        for bs in range(n_bs):
+        for bs in range(self.n_bs):
+            bs_img_split = self.image_split['test'][bs].astype(int)
+            X = self.raw_mat[source][:, :, bs_img_split, 0]
+            Y = self.raw_mat['subj'][:, :, bs_img_split, 0]
             for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = X[bs, met_a, other_subjs, :]
+                    x = X[met_a, other_subjs]
                     w = W[bs, met_a, subj, :] if source == 'subj' \
                         else W[bs, met_a, subj, other_subjs] # arbitarily remove 1 inst to match shape
-                    y = Y[bs, met_b, subj, :]
+                    y = Y[met_b, subj]
                     y_pred =  w @ x
                     output[bs, met, subj] = np.corrcoef(y_pred, y)[0, 1]
 
@@ -287,7 +292,7 @@ class PredMap:
         # init
         data = self.pred_results['within']
         sources = ['subj', 'inst']
-        methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
+        methods = ['rand', 'avg', 'corr']
         n_sources = len(sources)
         n_methods = len(methods)
         n_bs, n_met, n_subjs = data['subj']['rand'].shape
@@ -307,7 +312,7 @@ class PredMap:
         fig, axs = plt.subplots(1, n_met, figsize=(n_met * 10/3, 4))
         colors = plt.cm.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
-        method_labels = ['Rand', 'Avg', 'Corr', 'OLS', 'L1', 'L2']
+        method_labels = ['Rand', 'Avg', 'Corr']
 
         for i, met in enumerate(self.map_var):
             ax = axs[i]
@@ -350,7 +355,7 @@ class PredMap:
         # init
         data = self.pred_results['across']
         sources = ['subj', 'inst']
-        methods = ['rand', 'avg', 'corr', 'ols', 'lasso', 'ridge']
+        methods = ['rand', 'avg', 'corr']
         n_sources = len(sources)
         n_methods = len(methods)
         n_bs, n_met_pairs, n_subjs = data['subj']['rand'].shape
@@ -372,7 +377,7 @@ class PredMap:
         axs = axs.flatten()
         colors = plt.cm.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
-        method_labels = ['Rand', 'Avg', 'Corr', 'OLS', 'L1', 'L2']
+        method_labels = ['Rand', 'Avg', 'Corr']
 
         met_pairs = list(permutations(self.map_var, 2))
         for i, (met_a, met_b) in enumerate(met_pairs):

@@ -80,7 +80,7 @@ class CorrMap:
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
 
-    def compute_corr_maps(self) -> None:
+    def compute_corr_maps(self, sep_conds: bool = False) -> None:
         """pipeline from raw data to correlation maps."""
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
@@ -95,14 +95,17 @@ class CorrMap:
         self.corr_maps = {
             'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 
                                                     self.map_var, same=False,
+                                                    sep_conds = sep_conds,
                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
             'subj_to_subj': map_func.mapping_matrix(human_arr, human_arr, 
                                                     self.map_var, same=True,
+                                                    sep_conds = sep_conds,
                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
             'inst_to_inst': map_func.mapping_matrix(model_arr, model_arr, 
                                                     self.map_var, same=True,
+                                                    sep_conds = sep_conds,
                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
         }

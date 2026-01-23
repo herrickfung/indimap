@@ -329,6 +329,7 @@ def mapping_matrix(arr1: np.ndarray,
                    arr2: np.ndarray, 
                    map_var: list, 
                    same: bool,
+                   sep_conds: bool = False,
                    n_bs: int = 1,
                    seed: int = 42,
                    ) -> np.ndarray:
@@ -388,6 +389,9 @@ def mapping_matrix(arr1: np.ndarray,
 
                     output[i,j,k,l,:,:] = result
 
+    if sep_conds:
+        return output
+    
     output = stat_func.r2z(output, 'pearson')
     output = np.mean(output, axis=2)
     output = stat_func.z2r(output, 'pearson')

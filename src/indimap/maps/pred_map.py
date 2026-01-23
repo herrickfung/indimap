@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 from .corr_map import CorrMap
-from indimap.util import map_func, pred_func
+from indimap.util import map_func, pred_func, stat_func
 
 
 class PredMap:
@@ -86,14 +86,9 @@ class PredMap:
                 self.pred_from_corr(met, source)
 
     def compute_corr_map(self):
-        """ Load CorrMap object """
         self.corr_map = CorrMap(self.config)
-        try:
-            self.corr_map.load_map()
-        except FileNotFoundError:
-            self.corr_map = self.corr_map.compute_corr_maps()
-
-        self.corr_map = {
+        self.corr_map.compute_corr_maps(sep_conds = True)
+        self._corr_map = {
             'subj': self.corr_map.corr_maps['subj_to_subj'],
             'inst': self.corr_map.corr_maps['subj_to_inst']
         }
@@ -120,10 +115,6 @@ class PredMap:
             image_splits[i, 0] = split1
             image_splits[i, 1] = split2
 
-        # average across conditions
-        human_arr = human_arr.mean(axis=0)
-        model_arr = model_arr.mean(axis=0)
-
         self.image_split = {  # for rand, avg, corr
             'train': image_splits[:, 0, :],
             'test': image_splits[:, 1, :]
@@ -142,10 +133,9 @@ class PredMap:
 
         X = self.raw_mat[source]
         Y = self.raw_mat['subj']
-        n_met, n_subjs, _, _ = Y.shape
+        n_conds, n_met, n_subjs, _, _ = Y.shape
 
         # handle within and across metric prediction
-
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)]  # this allow shared logic
             output = np.empty((self.n_bs, n_met, n_subjs))
@@ -163,8 +153,12 @@ class PredMap:
                     other_subjs = [i for i in range(n_subjs) if i != subj]
                     rand_subj = np.random.choice(other_subjs)
 
-                    x = X[met_a, rand_subj, bs_img_split, 0]
-                    y = Y[met_b, subj, bs_img_split, 0]
+                    x, y = None, None
+                    for cond in range(n_conds):
+                        x_cond = X[cond, met_a, rand_subj, bs_img_split, 0]
+                        y_cond = Y[cond, met_b, subj, bs_img_split, 0]
+                        x = x_cond if x is None else np.concatenate((x, x_cond), axis=0)
+                        y = y_cond if y is None else np.concatenate((y, y_cond), axis=0)
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
         self.pred_results[within][source]['rand'] = output
@@ -174,8 +168,9 @@ class PredMap:
         Take the average of all other subjects/instances to predict
         """
 
+        n_conds, n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
+
         # handle within and across metric prediction
-        n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)] 
             output = np.empty((self.n_bs, n_met, n_subjs))
@@ -186,13 +181,18 @@ class PredMap:
 
         for bs in range(self.n_bs):
             bs_img_split = self.image_split['test'][bs].astype(int)
-            X = self.raw_mat[source][:, :, bs_img_split, 0]
-            Y = self.raw_mat['subj'][:, :, bs_img_split, 0]
+            X = self.raw_mat[source][:, :, :, bs_img_split, 0]
+            Y = self.raw_mat['subj'][:, :, :, bs_img_split, 0]
             for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = np.nanmean(X[met_a, other_subjs], axis=0)
-                    y = Y[met_b, subj]
+
+                    x, y = None, None
+                    for cond in range(n_conds):
+                        x_cond = np.nanmean(X[cond, met_a, other_subjs, :], axis=0)
+                        y_cond = Y[cond, met_b, subj, :]
+                        x = x_cond if x is None else np.concatenate((x, x_cond), axis=0)
+                        y = y_cond if y is None else np.concatenate((y, y_cond), axis=0)
                     output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
         self.pred_results[within][source]['avg'] = output
@@ -202,11 +202,12 @@ class PredMap:
         Use the correlation map as weight to predict the target subject/instance
         """
 
+        n_conds, n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
+
         # get weight from corr map first split
-        W = self.corr_map[source][:, 0, :, :, :]
+        W = self._corr_map[source][:, 0, :, :, :, :]
 
         # handle within and across metric prediction
-        n_met, n_subjs, _, _ = self.raw_mat['subj'].shape
         if within == 'within':
             met_pairs = [(i, i) for i in range(n_met)] 
             output = np.empty((self.n_bs, n_met, n_subjs))
@@ -217,17 +218,23 @@ class PredMap:
 
         for bs in range(self.n_bs):
             bs_img_split = self.image_split['test'][bs].astype(int)
-            X = self.raw_mat[source][:, :, bs_img_split, 0]
-            Y = self.raw_mat['subj'][:, :, bs_img_split, 0]
+            X = self.raw_mat[source][:, :, :, bs_img_split, 0]
+            Y = self.raw_mat['subj'][:, :, :, bs_img_split, 0]
             for met, (met_a, met_b) in enumerate(met_pairs):
                 for subj in range(n_subjs):
                     other_subjs = [i for i in range(n_subjs) if i != subj]
-                    x = X[met_a, other_subjs]
-                    w = W[bs, met_a, subj, :] if source == 'subj' \
-                        else W[bs, met_a, subj, other_subjs] # arbitarily remove 1 inst to match shape
-                    y = Y[met_b, subj]
-                    y_pred =  w @ x
-                    output[bs, met, subj] = np.corrcoef(y_pred, y)[0, 1]
+
+                    x, y = None, None
+                    for cond in range(n_conds):
+                        x_cond = X[cond, met_a, other_subjs]
+                        w_cond = W[bs, cond, met_a, subj, :] if source == 'subj' \
+                            else W[bs, cond, met_a, subj, other_subjs]  # arbitarily remove 1 inst to match shape
+                        w_norm = w_cond / np.sum(w_cond)
+                        x_cond = w_norm @ x_cond
+                        y_cond = Y[cond, met_b, subj]
+                        x = x_cond if x is None else np.concatenate((x, x_cond), axis=0)
+                        y = y_cond if y is None else np.concatenate((y, y_cond), axis=0)
+                    output[bs, met, subj] = np.corrcoef(x, y)[0, 1]
 
         self.pred_results[within][source]['corr'] = output
 

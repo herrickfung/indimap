@@ -49,3 +49,6 @@ Fung, H., Murty, N. A. R., & Rahnev, D. (2025). Human-like individual difference
   url     = {https://doi.org/10.1101/2025.10.25.684448}
 }
 ```
+
+## Enquiries
+[Herrick Fung](mailto:herrickfung@gmail.com)

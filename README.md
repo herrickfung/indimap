@@ -26,7 +26,7 @@ pip install git+https://github.com/herrickfung/indimap.git@v0.1.1
 ```
 
 ## Usage
-Please refer to the ```example``` directory for usage and details.
+See [tutorial](/tutorial).
 
 ## Data
 Human and neural network behavioral data used in the examples are retrieved from:

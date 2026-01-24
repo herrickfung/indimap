@@ -13,20 +13,15 @@ The IndiMap library requires the following dependencies:
 1. tqdm==4.66.1
 
 ## Installation
-Clone the repository and run the following commands in the root directory:
 ```bash
-git clone https://github.com/herrickfung/IndiMap.git
-cd IndiMap
-pip install .
+pip install git+https://github.com/herrickfung/IndiMap.git@v0.1.1
 ```
 
 If you're running on virtual environment, 
 ```bash
 python3 -m venv ./venv/
 source ./venv/bin/activate
-git clone https://github.com/herrickfung/IndiMap.git
-cd IndiMap
-pip install .
+pip install git+https://github.com/herrickfung/IndiMap.git@v0.1.1
 ```
 
 ## Usage

@@ -13,6 +13,7 @@ The IndiMap library requires the following dependencies:
 1. tqdm==4.66.1
 
 ## Installation
+To install IndiMap,
 ```bash
 pip install git+https://github.com/herrickfung/indimap.git@v0.1.1
 ```
@@ -25,11 +26,7 @@ pip install git+https://github.com/herrickfung/indimap.git@v0.1.1
 ```
 
 ## Usage
-Please refer to the ```example``` directory for usage and details. To run: 
-
-```bash
-python3 analyze_example.py
-```
+Please refer to the ```example``` directory for usage and details.
 
 ## Data
 Human and neural network behavioral data used in the examples are retrieved from:

@@ -8,7 +8,7 @@ config = {
     'inst_data': pd.read_csv('data/rtnet.csv'),
     'subj_column_name': 'subj',
     'inst_column_name': 'inst',
-    'map_variables': ['acc', 'rt', 'conf'],
+    'map_variables': ['acc', 'conf', 'rt'],
     'map_together': 'mnist_index',
     'map_separate': 'cond',
     'bootstrap_iterations': 10,

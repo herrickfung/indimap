@@ -215,7 +215,6 @@ Graph path:                     {self.graph_path}
     def plot_dims(self):
         """ Plot dims map """
         self.dims_map.plot_mds()
-        self.dims_map.plot_pca_explained_var()
     
     def plot_pred(self):
         """ Plot prediction results """

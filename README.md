@@ -14,14 +14,14 @@ The IndiMap library requires the following dependencies:
 
 ## Installation
 ```bash
-pip install git+https://github.com/herrickfung/IndiMap.git@v0.1.1
+pip install git+https://github.com/herrickfung/indimap.git@v0.1.1
 ```
 
 If you're running on virtual environment, 
 ```bash
 python3 -m venv ./venv/
 source ./venv/bin/activate
-pip install git+https://github.com/herrickfung/IndiMap.git@v0.1.1
+pip install git+https://github.com/herrickfung/indimap.git@v0.1.1
 ```
 
 ## Usage

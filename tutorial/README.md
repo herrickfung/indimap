@@ -4,6 +4,14 @@ This tutorial will guide you through the process of using the `IndiMap` library 
 
 ---
 
+## Contents
+- [Installation](#installation)
+- [Quick Start](#quick-start-examplepy)
+- [API](#api)
+
+---
+
+
 ## Installation
 To set up this tutorial locally, follow these steps:
 
@@ -116,11 +124,28 @@ python3 tutorial/example.py
     ```
 
 6. **Retrieve quantitative results:**
-    See API.
+    See [API](#api).
 
 ---
 
 ## API
+- [compute_all()](#compute_allload_existsfalse): Compute all analyses.
+- [plot_all()](#plot_all): Generate preliminary plots for quick and simple check.
+- [get_corr_map()](#get_corr_mapmap_from-map_to): Retrieve the individual-level similarity matrix.
+- [get_corr_results()](#get_corr_resultsmap_from-map_to-target-btw): Retrieve correlational mapping consistency results.
+- [get_rank_results()](#get_rank_resultsmap_from-map_to-btw): Retrieve rank mapping consistency results.
+- [get_top_map()](#get_top_mapmap_from-map_to): Retrieve the correlation map retaining only the best-mapped target.
+- [get_top_ct()](#get_top_ctmap_from-map_to): Retrieve counts of the best-mapped target for each source.
+- [get_top_corr()](#get_top_corrmap_from-map_to): Retrieve correlation values of the best-mapped target for each source.
+- [get_top_results()](#get_top_resultsmap_from-map_to-btw-corr_on): Retrieve correlational mapping results considering only the best-mapped target.
+- [get_top_expo()](#get_top_expomap_from-map_to): Retrieve exponential distribution fit results for best-mapped targets.
+- [get_mds()](#get_mds): Retrieve Multi-Dimensional Scaling (MDS) results.
+- [get_pca_results()](#get_pca_resultsfit_on-proj_to-center-scramble): Retrieve PCA results based on specified parameters.
+- [get_pred_results()](#get_pred_resultsby-using-within_metric): Retrieve prediction results based on specified parameters.
+
+---
+
+
 ### `compute_all(load_exists=False)`
 Compute all analyses.
 

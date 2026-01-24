@@ -4,7 +4,7 @@ This tutorial will guide you through the process of using the `IndiMap` library 
 
 ---
 
-## Contents
+# Contents
 - [Installation](#installation)
 - [Quick Start](#quick-start-examplepy)
 - [API](#api)
@@ -12,7 +12,7 @@ This tutorial will guide you through the process of using the `IndiMap` library 
 ---
 
 
-## Installation
+# Installation
 To set up this tutorial locally, follow these steps:
 
 ### 1. Clone the repository:
@@ -43,7 +43,7 @@ python3 tutorial/example.py
 ---
 
 
-## Quick Start: `example.py`
+# Quick Start: `example.py`
 
 1. **Import the necessary libraries:**
     ```python
@@ -128,7 +128,7 @@ python3 tutorial/example.py
 
 ---
 
-## API
+# API
 - [compute_all()](#compute_allload_existsfalse): Compute all analyses.
 - [plot_all()](#plot_all): Generate preliminary plots for quick and simple check.
 - [get_corr_map()](#get_corr_mapmap_from-map_to): Retrieve the individual-level similarity matrix.

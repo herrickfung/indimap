@@ -354,7 +354,7 @@ def mapping_matrix(arr1: np.ndarray,
     else:
         cm_idx = -1
 
-    assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
+    # assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
     if same:
         output = np.zeros((n_bs, 2,
@@ -364,7 +364,7 @@ def mapping_matrix(arr1: np.ndarray,
     else:
         output = np.zeros((n_bs, 2,
                            arr1.shape[0], arr1.shape[1], 
-                           arr1.shape[2], arr1.shape[2]
+                           arr1.shape[2], arr2.shape[2]
                            ))
 
     for i, (split1, split2) in enumerate(split_image_array(arr1, arr2, n_bs, seed)):
@@ -383,8 +383,8 @@ def mapping_matrix(arr1: np.ndarray,
                             )
 
                     if same:
-                        np.fill_diagonal(result, np.nan)
-                        result = result[~np.isnan(result)]
+                        np.fill_diagonal(result, np.inf)
+                        result = result[~np.isinf(result)]
                         result = result.reshape(arr1.shape[2], arr1.shape[2]-1)
 
                     output[i,j,k,l,:,:] = result

@@ -7,8 +7,8 @@ from matplotlib import rcParams
 from itertools import combinations
 from scipy.stats import sem
 from pathlib import Path
-import einops
 import numpy as np
+import pandas as pd
 
 from indimap.util import stat_func, map_func
 
@@ -79,18 +79,28 @@ class CorrMap:
         }
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
+    
 
     def compute_corr_maps(self, sep_conds: bool = False) -> None:
         """pipeline from raw data to correlation maps."""
-        human_arr = map_func.convert_to_array(self.human, self.human_iden,
-                                              self.map_var, self.map_tgt,
-                                              self.map_sep, self.map_confusion
-                                              )
-        model_arr = map_func.convert_to_array(self.model, self.model_iden,
-                                              self.map_var, self.map_tgt,
-                                              self.map_sep, self.map_confusion
-                                              )
-        map_func.check_for_extreme(human_arr, model_arr)
+
+        if isinstance(self.human, pd.DataFrame) and isinstance(self.model, pd.DataFrame):
+            human_arr = map_func.convert_to_array(self.human, self.human_iden,
+                                                self.map_var, self.map_tgt,
+                                                self.map_sep, self.map_confusion
+                                                )
+            model_arr = map_func.convert_to_array(self.model, self.model_iden,
+                                                self.map_var, self.map_tgt,
+                                                self.map_sep, self.map_confusion
+                                                )
+            map_func.check_for_extreme(human_arr, model_arr)
+
+        elif isinstance(self.human, np.ndarray) and isinstance(self.model, np.ndarray):
+            human_arr = self.human
+            model_arr = self.model
+
+        else:
+            raise ValueError("Human and model data must be both pandas DataFrame or both numpy ndarray.")
 
         self.corr_maps = {
             'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 
@@ -151,7 +161,7 @@ class CorrMap:
             "inst_btw_var" : inst_btw_var_results,
             "inst_gp_btw_var" : inst_to_group_btw_var_results,
         }
-    
+
     def plot_map_average(self) -> None:
         """Plot the average of the map. Would indicate the overall mapping accuracy"""
 
@@ -188,23 +198,31 @@ class CorrMap:
         n_bars = 2
         n_maps = 3
         n_metrics = len(self.map_var)
-        n_subjs = self.human[self.human_iden].nunique()
+        if isinstance(self.human, pd.DataFrame):
+            n_subjs = self.human[self.human_iden].nunique()
+        else:
+            n_subjs = self.human.shape[2]
+            n_insts = self.model.shape[2]
+            n_subjs_insts = np.max([n_subjs, n_insts])
 
         # transform data and average across bootstrap splits
-        trans_data = np.empty(shape=(n_metrics, n_maps, n_bars, n_subjs))
+        trans_data = np.empty(shape=(n_metrics, n_maps, n_bars, n_subjs_insts))
+        trans_data.fill(np.nan)
         map_type = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         result_type = ['subj_btw_split', 'subj_gp_btw_split']
         for i, map in enumerate(map_type):
             for j, result in enumerate(result_type):
-                trans_data[:, i, j, :] = np.mean(self.corr_results[map][result], axis = 0)   
+                vals = np.nanmean(self.corr_results[map][result], axis = 0)
+                n = vals.shape[-1]
+                trans_data[:, i, j, :n] = vals
 
         # plot here
         plt.clf()
         plt.figure(figsize=(8, 6))
         colors = plt.cm.get_cmap('Dark2', 8)
-        map_labels = ['Subj to Inst', 'Scrambled Subj to Inst', 
-                     'Subj to Subj', 'Scrambled Subj to Subj',
-                     'Inst to Inst', 'Scrambled Inst to Inst'
+        map_labels = ['Subj to Inst', 'Subj group to Inst', 
+                     'Subj to Subj', 'Subj group to Subj',
+                     'Inst to Inst', 'Inst group to Inst'
                      ]
 
         for i in range(n_metrics):
@@ -213,15 +231,15 @@ class CorrMap:
                     x_pos = i * 10 + j * 2.5 + k * 0.8
 
                     plt.bar(x_pos,
-                            np.mean(trans_data[i,j,k,:], axis = 0),
-                            yerr = sem(trans_data[i,j,k,:], axis = 0),
+                            np.nanmean(trans_data[i,j,k,:], axis = 0),
+                            yerr = sem(trans_data[i,j,k,:], axis = 0, nan_policy='omit'),
                             color = colors(j * 2 + k),
                             alpha = 0.5,
                             label = map_labels[j * 2 + k] if i == 0 else None,
                             )
 
-                    plt.scatter([x_pos-0.25 for _ in range(n_subjs)],
-                                trans_data[i,j,k,:],
+                    plt.scatter([x_pos-0.25 for _ in range(n)],
+                                trans_data[i,j,k,:n],
                                 color = colors(j * 2 + k),
                                 s = 5,
                                 )
@@ -245,15 +263,23 @@ class CorrMap:
         n_maps = 3
         metric_pairs = list(combinations(range(len(self.map_var)), 2))
         n_metric_pairs = len(metric_pairs)
-        n_subjs = self.human[self.human_iden].nunique()
+        if isinstance(self.human, pd.DataFrame):
+                n_subjs = self.human[self.human_iden].nunique()
+        else:
+            n_subjs = self.human.shape[2]
+            n_insts = self.model.shape[2]
+            n_subjs_insts = np.max([n_subjs, n_insts])
 
         # transform data and average across bootstrap splits
-        trans_data = np.empty(shape=(n_metric_pairs, n_maps, n_bars, n_subjs))
+        trans_data = np.empty(shape=(n_metric_pairs, n_maps, n_bars, n_subjs_insts))
+        trans_data.fill(np.nan)
         map_type = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         result_type = ['subj_btw_var', 'subj_gp_btw_var']
         for i, map in enumerate(map_type):
             for j, result in enumerate(result_type):
-                trans_data[:, i, j, :] = np.mean(self.corr_results[map][result], axis = 0)
+                vals = np.nanmean(self.corr_results[map][result], axis = 0)
+                n = vals.shape[-1]
+                trans_data[:, i, j, :n] = vals
 
         # plot here
         plt.clf()
@@ -271,20 +297,20 @@ class CorrMap:
                     x_pos = i * 10 + j * 2.5 + k * 0.8
 
                     plt.bar(x_pos,
-                            np.mean(trans_data[i,j,k,:], axis = 0),
-                            yerr = sem(trans_data[i,j,k,:], axis = 0),
+                            np.nanmean(trans_data[i,j,k,:], axis = 0),
+                            yerr = sem(trans_data[i,j,k,:], axis = 0, nan_policy='omit'),
                             color = colors(j * 2 + k),
                             alpha = 0.5,
                             label = map_labels[j * 2 + k] if i == 0 else None,
                             )
 
-                    plt.scatter([x_pos-0.25 for _ in range(n_subjs)],
+                    plt.scatter([x_pos-0.25 for _ in range(n)],
                                 trans_data[i,j,k,:],
                                 color = colors(j * 2 + k),
                                 s = 5,
                                 )
 
-        plt.xticks([i * 10 + 2.5 for i in range(n_metric_pairs)], xticks_labels, fontsize=14)
+        plt.xticks([i * 10 + 2.5 for i in range(n_metric_pairs)], xticks_labels, fontsize=10)
         plt.ylim(-0.6, 1.1)
         plt.xlabel('Pairs of Metric', fontsize=14, fontweight='bold')
         plt.ylabel('r', fontsize=14, fontweight='bold')
@@ -321,9 +347,12 @@ class CorrMap:
                                    ))
 
         if axis == 3:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot met split subj inst')
+            # data = einops.rearrange(data, 'boot split met subj inst -> boot met split subj inst', backend='numpy')
+            data = np.transpose(data, (0,2,1,3,4))
         elif axis == 4:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot met split inst subj')
+            # data = einops.rearrange(data, 'boot split met subj inst -> boot met split inst subj', backend='numpy')
+            data = np.transpose(data, (0,2,1,4,3))
+
 
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
@@ -376,9 +405,11 @@ class CorrMap:
                                    ))
 
         if axis == 3:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot split met subj inst')
+            # data = einops.rearrange(data, 'boot split met subj inst -> boot split met subj inst', backend='numpy')
+            data = data.transpose((0,1,2,3,4))
         elif axis == 4:
-            data = einops.rearrange(data, 'boot split met subj inst -> boot split met inst subj')
+            # data = einops.rearrange(data, 'boot split met subj inst -> boot split met inst subj', backend='numpy')
+            data = data.transpose((0,1,2,4,3))
 
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):

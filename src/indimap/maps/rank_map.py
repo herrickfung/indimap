@@ -7,7 +7,6 @@ from matplotlib import rcParams
 from itertools import combinations
 from math import comb
 from scipy.stats import sem
-import einops
 import numpy as np
 
 from .corr_map import CorrMap
@@ -81,6 +80,7 @@ class RankMap:
         n_metrics = len(self.corr_map.map_var)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         trans_data = np.empty(shape=(n_metrics, len(map_types), self.corr_map.n_bs))
+        trans_data.fill(np.nan)
         for i, map in enumerate(map_types):
             for j in range(n_metrics):
                 trans_data[j, i, :] = self.rank_results[map]['btw_split'][:, j]
@@ -121,6 +121,7 @@ class RankMap:
         n_metric_pair = len(metric_pairs)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         trans_data = np.empty(shape=(n_metric_pair, len(map_types), self.corr_map.n_bs))
+        trans_data.fill(np.nan)
         for i, map in enumerate(map_types):
             for j in range(n_metric_pair):
                 trans_data[j, i, :] = self.rank_results[map]['btw_var'][:, j]
@@ -172,7 +173,8 @@ class RankMap:
         list_in_data = [data[:,:,[i,j],:,:] for i, j in unique_pairs]
         results = np.empty(shape=(data.shape[0], len(list_in_data)))
         for i, in_data in enumerate(list_in_data):
-            in_data = einops.rearrange(in_data, 'boot split met subj inst -> boot met split subj inst')
+            # in_data = einops.rearrange(in_data, 'boot split met subj inst -> boot met split subj inst')
+            in_data = in_data.transpose((0,2,1,3,4))
             result = self.optim_sorcd_btw_split(in_data)
             result = result.mean(axis = 1)  # average across splits
             results[:,i] = result
@@ -199,7 +201,7 @@ class RankMap:
 
         data = np.argsort(-data, axis = 4).argsort(axis=4) + 1
         p1, p2 = np.triu_indices(data.shape[-1], k = 1)
-        data_diff = data[:, :, :, p2] - data[:, :, :, p1]
+        data_diff = data[..., p2] - data[..., p1]
         result = np.prod(data_diff, axis = 1)
         result = np.sum(result, axis=(2,3)) / np.prod(result.shape[2:])
         return result

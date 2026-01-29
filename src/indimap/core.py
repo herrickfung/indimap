@@ -83,11 +83,11 @@ class IndiMap:
         self.graph_path = Path(self.config['graph_path'])
         self.graph_path.mkdir(parents=True, exist_ok=True)
 
-        self.n_subjs = self.human[self.human_iden].nunique()
-        self.n_insts = self.model[self.model_iden].nunique()
-        self.n_metrics = len(self.map_var)
-        self.n_imgs = self.human[self.map_tgt].nunique()
-        self.n_conds = self.human[self.map_sep].nunique()
+        # self.n_subjs = self.human[self.human_iden].nunique()
+        # self.n_insts = self.model[self.model_iden].nunique()
+        # self.n_metrics = len(self.map_var)
+        # self.n_imgs = self.human[self.map_tgt].nunique()
+        # self.n_conds = self.human[self.map_sep].nunique()
 
         """ Initialize all maps """
         self.corr_map = CorrMap(self.config)

@@ -256,6 +256,45 @@ class CorrMap:
         plt.close()
         print(fig_path)
 
+
+        # Plot Corr Diff
+        diff_data = -np.diff(trans_data, axis=2).squeeze()
+        plt.clf()
+        plt.figure(figsize=(8, 6))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+        for i in range(n_metrics):
+            for j in range(n_maps):
+                x_pos = i * 3 + j * 0.8
+
+                plt.bar(x_pos,
+                        np.nanmean(diff_data[i,j,:], axis = 0),
+                        yerr = sem(diff_data[i,j,:], axis = 0, nan_policy='omit'),
+                        color = colors(j),
+                        alpha = 0.5,
+                        label = map_labels[j] if i == 0 else None,
+                        )
+
+                plt.scatter([x_pos-0.25 for _ in range(n)],
+                            diff_data[i,j,:n],
+                            color = colors(j),
+                            s = 5,
+                            )
+
+        plt.xticks([i * 3 + 0.8 for i in range(n_metrics)], self.map_var, fontsize=14)
+        plt.ylim(-0.6, 1.1)
+        plt.xlabel('ROIs', fontsize=14, fontweight='bold')
+        plt.ylabel('r', fontsize=14, fontweight='bold')
+        plt.legend()
+        plt.title('Correlation between bootstrap splits of images', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        fig_path = self.graph_path / 'CorrDiffBtwSplit.png'
+        plt.savefig(fig_path, dpi=384)
+        plt.close()
+        print(fig_path)
+
+
     def plot_btw_var(self) -> None:
         """ plot the correlation between metrics """
 
@@ -312,15 +351,53 @@ class CorrMap:
 
         plt.xticks([i * 10 + 2.5 for i in range(n_metric_pairs)], xticks_labels, fontsize=10)
         plt.ylim(-0.6, 1.1)
-        plt.xlabel('Pairs of Metric', fontsize=14, fontweight='bold')
-        plt.ylabel('r', fontsize=14, fontweight='bold')
+        plt.xlabel('Pairs of ROIs', fontsize=14, fontweight='bold')
+        plt.ylabel('corrected r', fontsize=14, fontweight='bold')
         plt.legend()
-        plt.title('Correlation between metrics', fontsize=16, fontweight='bold')
+        plt.title('Correlation between ROIs', fontsize=16, fontweight='bold')
         plt.tight_layout()
         fig_path = self.graph_path / 'CorrBtwMetrics.png'
         plt.savefig(fig_path, dpi=384)
         plt.close()
         print(fig_path)
+
+        # plot Corr Diff
+        diff_data = -np.diff(trans_data, axis=2).squeeze()
+        plt.clf()
+        plt.figure(figsize=(8, 6))
+        colors = plt.cm.get_cmap('Dark2', 8)
+        map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
+
+        for i in range(n_metric_pairs):
+            for j in range(n_maps):
+                x_pos = i * 3 + j * 0.8
+
+                plt.bar(x_pos,
+                        np.nanmean(diff_data[i,j,:], axis = 0),
+                        yerr = sem(diff_data[i,j,:], axis = 0, nan_policy='omit'),
+                        color = colors(j),
+                        alpha = 0.5,
+                        label = map_labels[j] if i == 0 else None,
+                        )
+
+                plt.scatter([x_pos-0.25 for _ in range(n)],
+                            diff_data[i,j,:n],
+                            color = colors(j),
+                            s = 5,
+                            )
+
+        plt.xticks([i * 3 + 0.8 for i in range(n_metric_pairs)], xticks_labels, fontsize=14)
+        plt.ylim(-0.6, 1.1)
+        plt.xlabel('ROIs', fontsize=14, fontweight='bold')
+        plt.ylabel('corrected r', fontsize=14, fontweight='bold')
+        plt.legend()
+        plt.title('Correlation between ROIs', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        fig_path = self.graph_path / 'CorrDiffBtwVar.png'
+        plt.savefig(fig_path, dpi=384)
+        plt.close()
+        print(fig_path)
+
 
     @staticmethod
     def corr_btw_split(data: np.ndarray, axis: int) -> tuple:

@@ -22,6 +22,7 @@ class CorrMap:
         self.config = config
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
+        self.input_type = self.config.get('input_type')
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
         self.map_var = list(self.config.get('map_variables'))
@@ -102,23 +103,43 @@ class CorrMap:
         else:
             raise ValueError("Human and model data must be both pandas DataFrame or both numpy ndarray.")
 
-        self.corr_maps = {
-            'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 
-                                                    self.map_var, same=False,
-                                                    sep_conds = sep_conds,
-                                                    n_bs = self.n_bs, seed=self.bs_seed
+        if self.input_type == 'RDM':
+            self.corr_maps = {
+                'subj_to_inst': map_func.mapping_rdm(human_arr, model_arr, 
+                                                     self.map_var, same=False,
+                                                     sep_conds = sep_conds,
+                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
-            'subj_to_subj': map_func.mapping_matrix(human_arr, human_arr, 
-                                                    self.map_var, same=True,
-                                                    sep_conds = sep_conds,
-                                                    n_bs = self.n_bs, seed=self.bs_seed
+                'subj_to_subj': map_func.mapping_rdm(human_arr, human_arr, 
+                                                     self.map_var, same=True,
+                                                     sep_conds = sep_conds,
+                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
-            'inst_to_inst': map_func.mapping_matrix(model_arr, model_arr, 
-                                                    self.map_var, same=True,
-                                                    sep_conds = sep_conds,
-                                                    n_bs = self.n_bs, seed=self.bs_seed
+                'inst_to_inst': map_func.mapping_rdm(model_arr, model_arr, 
+                                                     self.map_var, same=True,
+                                                     sep_conds = sep_conds,
+                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
-        }
+            }
+
+        else:
+            self.corr_maps = {
+                'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 
+                                                        self.map_var, same=False,
+                                                        sep_conds = sep_conds,
+                                                        n_bs = self.n_bs, seed=self.bs_seed
+                                                        ),
+                'subj_to_subj': map_func.mapping_matrix(human_arr, human_arr, 
+                                                        self.map_var, same=True,
+                                                        sep_conds = sep_conds,
+                                                        n_bs = self.n_bs, seed=self.bs_seed
+                                                        ),
+                'inst_to_inst': map_func.mapping_matrix(model_arr, model_arr, 
+                                                        self.map_var, same=True,
+                                                        sep_conds = sep_conds,
+                                                        n_bs = self.n_bs, seed=self.bs_seed
+                                                        ),
+            }
 
     def compute_corr_analysis(self) -> None:
         """Perform correlation analyses on all correlation maps."""

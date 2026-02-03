@@ -22,9 +22,11 @@ class IndiMap:
             model_name : str, optional
                 Model name (default: 'Model').
             subj_data : pandas.DataFrame
-                Human data (Pandas DataFrame).
+                Human data (Pandas DataFrame or np.ndarray).
             inst_data : pandas.DataFrame
-                Model/Instance data (Pandas DataFrame).
+                Model/Instance data (Pandas DataFrame, or np.ndarray).
+            input_type: str
+                Type of input data: 'trial' or 'RDM' (default: 'trial').
             subj_column_name : str, optional
                 Subject identifier in the DataFrame (default: 'subj').
             inst_column_name : str, optional
@@ -52,6 +54,7 @@ class IndiMap:
         default_config = {
             'task_name': 'Task',
             'model_name': 'Model',
+            'input_type': 'trial',
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
             'map_variables': ['acc', 'conf'],
@@ -69,6 +72,7 @@ class IndiMap:
         self.model_name = self.config.get('model_name')
         self.human = self.config.get('subj_data')
         self.model = self.config.get('inst_data')
+        self.input_type = self.config.get('input_type')
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
         self.map_var = self.config.get('map_variables')

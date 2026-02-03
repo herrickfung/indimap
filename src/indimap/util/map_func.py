@@ -398,6 +398,76 @@ def mapping_matrix(arr1: np.ndarray,
     return output
 
 
+def compute_full_rdm_corr_matrix(arr1, arr2):
+    assert arr1[1].shape == arr2[1].shape, "RDMs must have the same number of samples"
+    tril_idx = np.tril_indices(arr1.shape[1], k=-1)
+    vec1 = np.array([rdm[tril_idx] for rdm in arr1])
+    vec2 = np.array([rdm[tril_idx] for rdm in arr2])
+    mat = compute_full_corr_matrix(vec1, vec2)
+    return mat
+
+
+def mapping_rdm(arr1: np.ndarray, 
+                arr2: np.ndarray, 
+                map_var: list, 
+                same: bool,
+                sep_conds: bool = False,
+                n_bs: int = 1,
+                seed: int = 42,
+                ) -> np.ndarray:
+    """
+    Compute the full correlation matrix between two sets of raw data.
+    ---------------------------------------------------------------------------
+    Parameters:
+    arr1 (np.ndarray): The first input array.
+    arr2 (np.ndarray): The second input array.
+    ---------------------------------------------------------------------------
+    For both array, the axes refers to:
+    0. Bootstrap sample
+    1. Bootstrap split
+    2. Experimental Condition (map_sep)
+    3. Variable (map_var)
+    4. Subject
+    5. Image
+    """
+
+    if same:
+        output = np.zeros((n_bs, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[2] - 1
+                           ))
+    else:
+        output = np.zeros((n_bs, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr2.shape[2]
+                           ))
+
+    for i, (split1, split2) in enumerate(split_image_array(arr1, arr2, n_bs, seed)):
+        for j, idx in enumerate([split1, split2]):
+            for k in range(arr1.shape[0]):
+                for l in range(arr1.shape[1]):
+                    sub_arr1 = np.take(arr1[k, l, :, :, :], idx, axis = -2)
+                    sub_arr1 = np.take(sub_arr1, idx, axis = -1)
+                    sub_arr2 = np.take(arr2[k, l, :, :, :], idx, axis = -2)
+                    sub_arr2 = np.take(sub_arr2, idx, axis = -1)
+                    result = compute_full_rdm_corr_matrix(sub_arr1, sub_arr2)
+
+                    if same:
+                        np.fill_diagonal(result, np.inf)
+                        result = result[~np.isinf(result)]
+                        result = result.reshape(arr1.shape[2], arr1.shape[2]-1)
+
+                    output[i,j,k,l,:,:] = result
+
+    if sep_conds:
+        return output
+    
+    output = stat_func.r2z(output, 'pearson')
+    output = np.mean(output, axis=2)
+    output = stat_func.z2r(output, 'pearson')
+    return output
+
+
 def retain_max_per_row_in_mat(arr: np.ndarray) -> np.ndarray:
     """
     Simple function to take in a 2D array and return a 2D array

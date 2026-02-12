@@ -36,9 +36,21 @@ F. Rafiei, M. Shekhar, & D. Rahnev (2024). The neural network RTNet exhibits the
 ## Citation
 If you use this library in academic work, please cite:
 
-Fung, H., Murty, N. A. R., & Rahnev, D. (2025). Human-like individual differences emerge from random weight initializations in neural networks (p. 2025.10.25.684448). bioRxiv. [https://doi.org/10.1101/2025.10.25.684448](https://doi.org/10.1101/2025.10.25.684448).
+Fung, H., Murty, N. A. R., & Rahnev, D. (2026). Individual differences in artificial neural networks capture individual differences in human behavior (p. 2026.02.10.705061). bioRxiv. [https://doi.org/10.64898/2026.02.10.705061](https://www.biorxiv.org/content/10.64898/2026.02.10.705061)
+
+Fung, H., Murty, N. A. R., & Rahnev, D. (2025). Human-like individual differences emerge from random weight initializations in neural networks (p. 2025.10.25.684448). bioRxiv. [https://doi.org/10.1101/2025.10.25.684448](https://doi.org/10.1101/2025.10.25.684448)
 
 ```bibtex
+@article{Fung2026IndividualDifferencesANN,
+  title = {Individual differences in artificial neural networks capture individual differences in human behavior},
+  author  = {Fung, Herrick and Murty, N. A. R. and Rahnev, Dobromir},
+  journal = {bioRxiv},
+  year    = {2026},
+  pages   = {2026.02.10.705061},
+  doi     = {10.64898/2026.02.10.705061},
+  url     = {https://doi.org/10.64898/2026.02.10.705061}
+}
+
 @article{Fung2025HumanLikeID,
   title   = {Human-like individual differences emerge from random weight initializations in neural networks},
   author  = {Fung, Herrick and Murty, N. A. R. and Rahnev, Dobromir},

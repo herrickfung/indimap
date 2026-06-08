@@ -1,5 +1,4 @@
 # IndiMap Library
-Try make change
 This repository provides the IndiMap library, a Python library designed for analyzing and mapping individual differences in human and neural networks.
 
 ## Python Dependencies

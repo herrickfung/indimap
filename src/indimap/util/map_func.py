@@ -1,4 +1,5 @@
 from sklearn.impute import SimpleImputer
+from itertools import combinations
 import numpy as np
 import pandas as pd
 
@@ -109,6 +110,72 @@ def convert_to_array(df: pd.DataFrame,
             if metric != 'confuse_mat':
                 imputer = SimpleImputer(strategy='mean')
                 output[i,j,:,:,0] = imputer.fit_transform(output[i,j,:,:,0])
+
+    return output
+
+
+def convert_to_array_per_category(df: pd.DataFrame, 
+                                  subj_name: str, 
+                                  stim_name: str,
+                                  var_name: str,
+                                  tgt_name: str, 
+                                  sep_name: str,
+                                  ) -> np.ndarray:
+    """
+    Convert dataframe to numpy array.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    df (pd.DataFrame): The input dataframe.
+    subj_name (str): Subject identifier column name.
+    var_name (str): Variable column name.
+    tgt_name (str): Variable column name that map together.
+    sep_name (str): Variable column name that map separately. Separate in array.
+    ---------------------------------------------------------------------------
+    """
+
+    df = (
+        df.groupby([subj_name, sep_name, tgt_name], as_index=False)
+        .mean(numeric_only=True)
+        .reset_index()
+    )
+
+    subjs = np.sort(df[subj_name].unique())
+    stims = np.sort(df[stim_name].unique())
+    seps = np.sort(df[sep_name].unique())
+    n_subjs = len(subjs)
+    n_stims = len(stims)
+    n_vars = len(var_name)
+    n_seps = len(seps)
+    n_imgs = 0
+
+    # Find max number of images across all sep × cat combinations
+    for cond in seps:
+        for cat in stims:
+            slice_data = df[(df[sep_name] == cond) & (df[stim_name] == cat)]
+            n = slice_data[tgt_name].nunique()
+            if n > n_imgs:
+                n_imgs = n
+
+    # Shape: (n_seps, n_stims, n_vars, n_subjs, n_imgs, 1)
+    output = np.zeros((n_seps, n_vars, n_subjs, n_stims, n_imgs, 1))
+
+    for i, cond in enumerate(seps):
+        cond_data = df[df[sep_name] == cond]
+        for s, stim in enumerate(stims):
+            stim_data = cond_data[cond_data[stim_name] == stim]
+            imgs = np.sort(stim_data[tgt_name].unique())
+            for j, metric in enumerate(var_name):
+                for k, subj in enumerate(subjs):
+                    subj_data = stim_data[stim_data[subj_name] == subj]
+                    for m, img in enumerate(imgs):
+                        if img in subj_data[tgt_name].values:
+                            img_data = subj_data[subj_data[tgt_name] == img]
+                            output[i,j,k,s,m] = img_data[metric].values[0]
+                        else:
+                            output[i,j,k,s,m] = np.nan
+                imputer = SimpleImputer(strategy='mean')
+                output[i,j,:,s,:,0] = imputer.fit_transform(output[i,j,:,s,:,0])
 
     return output
 
@@ -264,6 +331,38 @@ def split_image_array(arr1: np.ndarray,
         yield chosen, unchosen
 
 
+def split_category_array(arr1: np.ndarray, 
+                      arr2: np.ndarray, 
+                      n_bs: int, 
+                      seed: int = 42,
+                      ) -> tuple:
+    """
+    Split array into train and test sets.
+    ---------------------------------------------------------------------------
+    Parameters:
+    ---------------------------------------------------------------------------
+    human (np.ndarray): The human data array.
+    model (np.ndarray): The model data array.
+    n_bs (int): Number of bootstrap samples.
+    seed (int): Random seed for reproducibility.
+    ---------------------------------------------------------------------------
+    """
+
+    np.random.seed(seed)
+    stim_axis = arr1.shape[-3]
+    all_indices = np.arange(stim_axis)
+
+    all_combinations = list(combinations(all_indices, stim_axis // 2))
+    n_iter = min(n_bs, len(all_combinations))
+    test_combinations = np.random.choice(len(all_combinations), n_iter, replace=False)
+
+    for i in test_combinations:
+        chosen = np.array(all_combinations[i])
+        unchosen = np.setdiff1d(all_indices, chosen)
+        yield chosen, unchosen
+   
+
+
 def split_subj(n_subjs: int, 
                n_bs: int,
                seed: int = 42) -> np.ndarray:
@@ -299,7 +398,6 @@ def compute_full_corr_matrix(arr1: np.ndarray, arr2: np.ndarray) -> np.ndarray:
     arr2 (np.ndarray): The second input array.
     ---------------------------------------------------------------------------
     """
-
     # normalize both array and compute dot product
     arr1 = (arr1 - np.nanmean(arr1, axis = 1, keepdims=True)) / np.nanstd(arr1, axis = 1, keepdims=True)
     arr2 = (arr2 - np.nanmean(arr2, axis = 1, keepdims=True)) / np.nanstd(arr2, axis = 1, keepdims=True)
@@ -348,7 +446,6 @@ def mapping_matrix(arr1: np.ndarray,
     4. Subject
     5. Image
     """
-
     if 'confuse_mat' in map_var:
         cm_idx = map_var.index('confuse_mat')
     else:
@@ -395,6 +492,56 @@ def mapping_matrix(arr1: np.ndarray,
     output = stat_func.r2z(output, 'pearson')
     output = np.mean(output, axis=2)
     output = stat_func.z2r(output, 'pearson')
+    return output
+
+
+def across_category_mapping_matrix(arr1: np.ndarray,
+                                   arr2: np.ndarray, 
+                                   same: bool,
+                                   sep_conds: bool = False,
+                                   n_bs: int = 1,
+                                   seed: int = 42,
+                                   ):
+
+    assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
+
+    n_iter = min(n_bs, len(list(combinations(np.arange(arr1.shape[-3]), arr1.shape[-3] // 2))))
+
+    if same:
+        output = np.zeros((n_iter, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[2] - 1
+                           ))
+    else:
+        output = np.zeros((n_iter, 2,
+                           arr1.shape[0], arr1.shape[1], 
+                           arr1.shape[2], arr1.shape[2]
+                           ))
+
+    for i, (split1, split2) in enumerate(split_category_array(arr1, arr2, n_bs, seed)):
+        for j, idx in enumerate([split1, split2]):
+            for k in range(arr1.shape[0]):
+                for l in range(arr1.shape[1]):
+
+                    result = compute_full_corr_matrix(
+                        arr1[k, l, :, idx, :, 0].reshape(arr1.shape[2], -1),
+                        arr2[k, l, :, idx, :, 0].reshape(arr2.shape[2], -1),
+                        )
+
+                    if same:
+                        np.fill_diagonal(result, np.nan)
+                        result = result[~np.isnan(result)]
+                        result = result.reshape(arr1.shape[2], arr1.shape[2]-1)
+
+                    output[i,j,k,l,:,:] = result
+
+    if sep_conds:
+        return output
+    
+    output = stat_func.r2z(output, 'pearson')
+    output = np.mean(output, axis=2)
+    output = stat_func.z2r(output, 'pearson')
+
     return output
 
 

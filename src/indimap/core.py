@@ -29,14 +29,18 @@ class IndiMap:
                 Subject identifier in the DataFrame (default: 'subj').
             inst_column_name : str, optional
                 Model/Instance identifier in the DataFrame (default: 'inst').
+            stim_column_name: str, optional
+                Stimulus identifier in the DataFrame (default: 'stim').
             map_variables : list of str, optional
                 Column names to map/correlate on (default: ['acc', 'conf']).
             map_together : list of str, optional
                 Variables to map/correlate together (e.g., image_index, stimulus).
             map_separate : list of str, optional
                 Variables to map/correlate separately. The resulting map will be averaged after mapping.
-            map_confusion: bool
+            map_confusion: bool, optional
                 Whether to compute and compare confusion matrix (default: False).
+            map_category: bool, optional
+                Whether or not to compute and compare across category mapping (default: False).
             bootstrap_iterations : int, optional
                 Number of bootstrap iterations (default: 1000).
             bootstrap_seed : int, optional
@@ -54,8 +58,10 @@ class IndiMap:
             'model_name': 'Model',
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
+            'stim_column_name': 'stim',
             'map_variables': ['acc', 'conf'],
             'map_confusion': False,
+            'map_category': False,
             'bootstrap_iterations': 1000,
             'bootstrap_seed': 42,
             'nComp_PCA': 10,
@@ -71,10 +77,12 @@ class IndiMap:
         self.model = self.config.get('inst_data')
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
+        self.stim_iden = self.config.get('stim_column_name')
         self.map_var = self.config.get('map_variables')
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
         self.map_confusion = self.config.get('map_confusion')
+        self.map_category = self.config.get('map_category')
         self.n_bs = self.config['bootstrap_iterations']
         self.bs_seed = self.config['bootstrap_seed']
         self.n_comps = self.config['nComp_PCA']
@@ -110,6 +118,7 @@ Mapping variables:              {self.map_var}
 Mapping together:               {self.map_tgt}
 Mapping separately:             {self.map_sep}
 Map confusion matrix:           {self.map_confusion}
+Map category:                   {self.map_category}
 Bootstrap iterations:           {self.n_bs}
 Bootstrap random seed:          {self.bs_seed}
 Number of components (PCA):     {self.n_comps}

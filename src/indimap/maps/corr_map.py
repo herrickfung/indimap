@@ -24,10 +24,12 @@ class CorrMap:
         self.model = self.config.get('inst_data')
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
+        self.stim_iden = self.config.get('stim_column_name')
         self.map_var = list(self.config.get('map_variables'))
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
         self.map_confusion = self.config.get('map_confusion')
+        self.map_category = self.config.get('map_category')
         self.n_bs = self.config.get('bootstrap_iterations')
         self.bs_seed = self.config.get('bootstrap_seed')
         self.output_path = Path(self.config['output_path'])
@@ -37,6 +39,11 @@ class CorrMap:
             self.map_var.append('confuse_mat')
 
         self.corr_maps = {
+            'subj_to_inst': None,
+            'subj_to_subj': None,
+            'inst_to_inst': None,
+        }
+        self.cat_corr_maps = {
             'subj_to_inst': None,
             'subj_to_subj': None,
             'inst_to_inst': None,
@@ -56,6 +63,7 @@ class CorrMap:
         """ Loads precomputed results from a file """
         loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
         self.corr_maps = loaded['corr_maps'].item()
+        self.cat_corr_maps = loaded['cat_corr_maps'].item()
         self.corr_results = loaded['corr_results'].item()
 
     def save_all(self):
@@ -63,6 +71,7 @@ class CorrMap:
         output = {
             'corr_maps': self.corr_maps,
             'corr_results': self.corr_results,
+            'cat_corr_maps': self.cat_corr_maps,
         }
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
@@ -109,6 +118,30 @@ class CorrMap:
                                                     n_bs = self.n_bs, seed=self.bs_seed
                                                     ),
         }
+
+        if self.map_category:
+            cat_human_arr = map_func.convert_to_array_per_category(self.human, self.human_iden,
+                                                                   self.stim_iden,
+                                                                   self.map_var, self.map_tgt,
+                                                                   self.map_sep,
+                                                                   )
+            cat_model_arr = map_func.convert_to_array_per_category(self.model, self.model_iden,
+                                                                   self.stim_iden,
+                                                                   self.map_var, self.map_tgt,
+                                                                   self.map_sep,
+                                                                   )
+
+            self.cat_corr_maps = {
+                'subj_to_inst': map_func.across_category_mapping_matrix(cat_human_arr, cat_model_arr, 
+                                                                        same=False, sep_conds = sep_conds,
+                                                                        n_bs = self.n_bs, seed=self.bs_seed
+                                                                        ),
+                'subj_to_subj': map_func.across_category_mapping_matrix(cat_human_arr, cat_human_arr,
+                                                                        same=True, sep_conds = sep_conds,
+                                                                        n_bs = self.n_bs, seed=self.bs_seed
+                                                                        ),
+                # 'inst_to_inst':  unsolved bug likely due to nan correlation results from some pairs
+            }
 
     def compute_corr_analysis(self) -> None:
         """Perform correlation analyses on all correlation maps."""

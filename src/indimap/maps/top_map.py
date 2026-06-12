@@ -84,7 +84,7 @@ class TopMap:
             self.top_maps[name] = self.get_top(self.corr_map.corr_maps[name])
             self.top_ct[name], self.top_corr[name] = self.get_counts_and_corr(self.top_maps[name])
             self.top_results[name] = self.do_top_analysis(name)
-
+        
     def do_top_analysis(self, key: str) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
         ct_btw_split_results = self.corr_btw_split(self.top_ct[key])
@@ -96,8 +96,9 @@ class TopMap:
         else:
             ct_btw_var_results = None
             corr_btw_var_results = None
-        
+
         expo_slope_results = self.expo_slope_analysis(self.top_ct[key])
+        top_pair_btw_split, top_gp_btw_split = self.compute_top_identifiability(self.corr_map.corr_maps[key])
 
         return {
             "ct_btw_split": ct_btw_split_results,
@@ -105,6 +106,8 @@ class TopMap:
             "ct_btw_var": ct_btw_var_results,
             "corr_btw_var": corr_btw_var_results,
             "expo_slope": expo_slope_results,
+            "top_pair_btw_split": top_pair_btw_split,
+            "top_gp_btw_split": top_gp_btw_split,
         }
 
     def plot_top_average(self) -> None:
@@ -378,4 +381,37 @@ class TopMap:
                 results[i,j] = [intercept, slope]
 
         return results
+
+    @staticmethod
+    def compute_top_identifiability(data) -> np.ndarray:
+        """
+        For each subject, find best-match using half of the data, 
+        then check in the other half how best compared to others
+        ---------------------------------------------------------------------------
+        Parameters:
+        ---------------------------------------------------------------------------
+        data (np.ndarray): The input data array with shape (The CorrMap)
+        [bootstrap, split, metrics, subj, inst].
+        """
+
+        split_1 = data[:, 0, ...]
+        split_2 = data[:, 1, ...]
+
+        # Index of the best-matching instance per (bootstrap, metric, subject)
+        best_match = split_1.argmax(axis=-1)  # (bootstraps, metrics, subjects)
+
+        # Within: similarity to the best-match instance in the held-out split
+        within_results = np.take_along_axis(split_2, best_match[..., np.newaxis], axis=-1).squeeze(-1)
+
+        # Between: mean similarity to all *other* instances in the held-out split
+        n_instances = split_2.shape[-1]
+        total = np.nansum(split_2, axis=-1)
+        best_match_vals = np.take_along_axis(split_2, best_match[..., np.newaxis], axis=-1).squeeze(-1)
+        count = np.sum(~np.isnan(split_2), axis=-1) - 1  # exclude the best-match slot
+        between_results = (total - best_match_vals) / count
+
+        return within_results, between_results
+
+
+
 

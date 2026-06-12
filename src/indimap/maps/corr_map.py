@@ -53,6 +53,11 @@ class CorrMap:
             'subj_to_subj': None,
             'inst_to_inst': None,
         }
+        self.cat_corr_results = {
+            'subj_to_inst': None,
+            'subj_to_subj': None,
+            'inst_to_inst': None,
+        }
 
     def check_exist(self):
         """ Check whether the file exist """
@@ -65,6 +70,7 @@ class CorrMap:
         self.corr_maps = loaded['corr_maps'].item()
         self.cat_corr_maps = loaded['cat_corr_maps'].item()
         self.corr_results = loaded['corr_results'].item()
+        self.cat_corr_results = loaded['cat_corr_results'].item()
 
     def save_all(self):
         """ Save results to a file """
@@ -72,6 +78,7 @@ class CorrMap:
             'corr_maps': self.corr_maps,
             'corr_results': self.corr_results,
             'cat_corr_maps': self.cat_corr_maps,
+            'cat_corr_results': self.cat_corr_results,
         }
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)
@@ -153,6 +160,15 @@ class CorrMap:
         self.corr_results = {
             map_type: self.do_corr_analysis(map_type) for map_type in map_dicts
         }
+
+        if self.map_category:
+            cat_map_dicts = [
+                'subj_to_inst',
+                'subj_to_subj',
+            ]
+            self.cat_corr_results = {
+                map_type: self.do_corr_analysis(map_type) for map_type in cat_map_dicts
+            }
 
     def do_corr_analysis(self, key: str) -> dict:
         """pipeline for performing all analysis in the correlation map matrix"""

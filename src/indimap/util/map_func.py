@@ -204,10 +204,15 @@ def check_for_extreme(human: np.ndarray, model: np.ndarray) -> None:
 
     extreme_human = np.where((human_flag_crit > 0.99) | (human_flag_crit < 0.01))[1]
     extreme_model = np.where((model_flag_crit > 0.99) | (model_flag_crit < 0.01))[1]
+
     if extreme_human.size > 0:
         raise ValueError(f"Human {extreme_human} is achieving 99% or 1% accuracy, remove this subject")
     if extreme_model.size > 0:
-        raise ValueError(f"Instances {extreme_model} is achieving 99% or 1% accuracy, remove this instance")
+        print(f"Warning: Instances {extreme_model} is achieving 99% or 1% accuracy, removing these instances.")
+        keep_mask = np.ones(model.shape[2], dtype=bool)
+        keep_mask[extreme_model] = False
+        model = model[:, :, keep_mask, :, :]
+    return model
 
 
 def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
@@ -231,7 +236,7 @@ def random_split_half(human: np.ndarray, model: np.ndarray) -> tuple:
     chosen = np.random.choice(img_axis, int(img_axis/2), replace=False)
     unchosen = np.setdiff1d(all_indices, chosen)
     for i in range(human.shape[0]):
-        for k in range(human.shape[2]):
+        for k in range(model.shape[2]):
             check_split = [
                 len(np.unique(human[i,0,k,chosen,0])),
                 len(np.unique(human[i,0,k,unchosen,0])),
@@ -451,7 +456,7 @@ def mapping_matrix(arr1: np.ndarray,
     else:
         cm_idx = -1
 
-    assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
+    # assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
     if same:
         output = np.zeros((n_bs, 2,
@@ -461,7 +466,7 @@ def mapping_matrix(arr1: np.ndarray,
     else:
         output = np.zeros((n_bs, 2,
                            arr1.shape[0], arr1.shape[1], 
-                           arr1.shape[2], arr1.shape[2]
+                           arr1.shape[2], arr2.shape[2]
                            ))
 
     for i, (split1, split2) in enumerate(split_image_array(arr1, arr2, n_bs, seed)):
@@ -503,7 +508,7 @@ def across_category_mapping_matrix(arr1: np.ndarray,
                                    seed: int = 42,
                                    ):
 
-    assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
+    # assert arr1.shape == arr2.shape, "Shape mismatch between the two arrays in mapping matrix"
 
     n_iter = min(n_bs, len(list(combinations(np.arange(arr1.shape[-3]), arr1.shape[-3] // 2))))
 
@@ -515,7 +520,7 @@ def across_category_mapping_matrix(arr1: np.ndarray,
     else:
         output = np.zeros((n_iter, 2,
                            arr1.shape[0], arr1.shape[1], 
-                           arr1.shape[2], arr1.shape[2]
+                           arr1.shape[2], arr2.shape[2]
                            ))
 
     for i, (split1, split2) in enumerate(split_category_array(arr1, arr2, n_bs, seed)):

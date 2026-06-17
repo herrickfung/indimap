@@ -106,7 +106,7 @@ class CorrMap:
                                               self.map_var, self.map_tgt,
                                               self.map_sep, self.map_confusion
                                               )
-        map_func.check_for_extreme(human_arr, model_arr)
+        model_arr = map_func.check_for_extreme(human_arr, model_arr)
 
         self.corr_maps = {
             'subj_to_inst': map_func.mapping_matrix(human_arr, model_arr, 

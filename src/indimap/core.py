@@ -243,7 +243,7 @@ Graph path:                     {self.graph_path}
             print(f"Plotting {name}")
             func()
 
-    def get_corr_map(self, map_from: str, map_to: str):
+    def get_corr_map(self, map_from: str, map_to: str, split_by: str = 'rand'):
         """
         Retrieve the correlation map for a specified pair of matrices.
         This function fetches the correlation map between two specified 
@@ -252,6 +252,7 @@ Graph path:                     {self.graph_path}
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
+            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
 
         Returns:
         CorrelationMapping
@@ -262,15 +263,21 @@ Graph path:                     {self.graph_path}
         """
 
         CorrelationMapping = namedtuple("CorrelationMapping", ["dims", "mat"])
+
+        maps = {
+            'rand': self.corr_map.corr_maps,
+            'cate': self.corr_map.cat_corr_maps,
+        }
+
         return CorrelationMapping(
             dims=(
             "Dimensions: bootstrap iterations x split-half x metrics x "
             f"{map_from} x {map_to}"
             ),
-            mat=self.corr_map.corr_maps.get(f"{map_from}_to_{map_to}", None)
+            mat=maps[split_by].get(f"{map_from}_to_{map_to}", None)
         )
 
-    def get_corr_results(self, map_from: str, map_to: str, target: str, btw: str):
+    def get_corr_results(self, map_from: str, map_to: str, target: str, btw: str, split_by: str = 'rand'):
         """
         Retrieve correlation results for a specific mapping and target.
 
@@ -279,6 +286,7 @@ Graph path:                     {self.graph_path}
             map_to (str): The target mapping identifier, either "subj", or "inst".
             target (str): The target variable for which correlation results are retrieved, either "subj", or "inst".
             btw (str): The between-group comparison identifier, either "split" or "var".
+            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
 
         Returns:
             namedtuple: A `CorrelationResults` namedtuple containing:
@@ -287,11 +295,17 @@ Graph path:                     {self.graph_path}
         """
 
         CorrelationResults = namedtuple("CorrelationResults", ["dims", "mat"])
+
+        maps = {
+            'rand': self.corr_map.corr_results,
+            'cate': self.corr_map.cat_corr_results,
+        }
+
         return CorrelationResults(
             dims=(
             f"Dimensions: bootstrap iterations x metrics x {target}"
             ),
-            mat=self.corr_map.corr_results.get(
+            mat=maps[split_by].get(
                 f"{map_from}_to_{map_to}", {}
                 ).get(f"{target}_btw_{btw}", None)
         )
@@ -449,6 +463,34 @@ Graph path:                     {self.graph_path}
             ),
             mat=self.top_map.top_results.get(f"{map_from}_to_{map_to}", {}
             ).get('expo_slope', None)
+        )
+
+
+    def get_top_iden(self, map_from: str, map_to: str, target: str):
+        """
+        Retrieve the results for identifiability analyses
+
+        Args:
+            map_from (str): The source matrix identifier, either "subj" or "inst".
+            map_to (str): The target matrix identifier, either "subj" or "inst".
+            target (str): The top matched pair or group, either "pair" or "gp".
+
+        Returns:
+        CorrelationMapping
+            A named tuple containing:
+            - dims (str): A description of the dimensions of the correlation map.
+            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+              otherwise None.
+        """
+
+        TopIden = namedtuple("TopIden", ["dims", "mat"])
+        return TopIden(
+            dims=(
+            "Dimensions: bootstrap iterations x split-half x metrics x "
+            f"{map_from}"
+            ),
+            mat=self.top_map.top_results.get(f"{map_from}_to_{map_to}", {}
+            ).get(f"top_{target}_btw_split", None)
         )
 
     def get_mds(self):

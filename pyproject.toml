@@ -7,7 +7,7 @@ where = ["src"]
 
 [project]
 name = "indimap"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python package for mapping individual differences in human behavior"
 authors = [
     { name = "Herrick Fung", email = "herrickfung@gmail.com" }

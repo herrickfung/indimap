@@ -167,13 +167,16 @@ class CorrMap:
                 'subj_to_subj',
             ]
             self.cat_corr_results = {
-                map_type: self.do_corr_analysis(map_type) for map_type in cat_map_dicts
+                map_type: self.do_corr_analysis(map_type, cate=True) for map_type in cat_map_dicts
             }
 
-    def do_corr_analysis(self, key: str) -> dict:
+    def do_corr_analysis(self, key: str, cate: bool = False) -> dict:
         """pipeline for performing all analysis in the correlation map matrix"""
         # convert to z scores before correlating again in all below
-        data = stat_func.r2z(self.corr_maps[key], 'pearson')
+        if cate:
+            data = stat_func.r2z(self.cat_corr_maps[key], 'pearson')
+        else:
+            data = stat_func.r2z(self.corr_maps[key], 'pearson')
 
         # compute split half correlations
         subj_btw_split_results, subj_to_group_btw_split_results = self.corr_btw_split(data, 3)

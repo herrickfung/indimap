@@ -393,9 +393,11 @@ class CorrMap:
 
 
         within_results = stat_func.r2z(within_results, 'pearson')
+        within_results[within_results == 10] = np.nan
         within_results = np.nanmean(within_results, axis = 2)
         within_results = stat_func.z2r(within_results, 'pearson')
 
+        between_results[between_results == 10] = np.nan
         between_results = np.nanmean(between_results, axis = 2)
         between_results = stat_func.z2r(between_results, 'pearson')
 

@@ -61,16 +61,25 @@ class RankMap:
     def do_rank_analysis(self, map_type: str) -> dict:
         """Main analysis pipeline on the count and correlations of top performers"""
 
+        do_cat_map = (map_type != "inst_to_inst" and self.corr_map.map_category)
+
         btw_split = self.optim_sorcd_btw_split(self.corr_map.corr_maps[map_type])
+        cat_btw_split = (self.optim_sorcd_btw_split(self.corr_map.cat_corr_maps[map_type])
+                         ) if do_cat_map else None
 
         if len(self.corr_map.map_var) > 1:
             btw_var = self.compute_sorcd_btw_var(self.corr_map.corr_maps[map_type])
+            cat_btw_var = (self.compute_sorcd_btw_var(self.corr_map.cat_corr_maps[map_type])
+                           ) if do_cat_map  else None
         else:
             btw_var = None
+            cat_btw_var = None
 
         return {
             'btw_split': btw_split,
             'btw_var': btw_var,
+            'cat_btw_split': cat_btw_split,
+            'cat_btw_var': cat_btw_var,
         }
 
     def plot_btw_split(self) -> None:

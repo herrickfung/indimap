@@ -87,11 +87,13 @@ class CorrMap:
         """ Loads maps for other classes"""
         loaded = np.load(self.output_path / 'CorrMap_results.npz', allow_pickle=True)
         self.corr_maps = loaded['corr_maps'].item()
+        self.cat_corr_maps = loaded['cat_corr_maps'].item()
 
     def save_map(self):
         """ Saves maps for other classes """
         output = {
             'corr_maps': self.corr_maps,
+            'cat_corr_maps': self.cat_corr_maps,
         }
         output_path = self.output_path / 'CorrMap_results.npz'
         np.savez(output_path, **output)

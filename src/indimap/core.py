@@ -310,7 +310,7 @@ Graph path:                     {self.graph_path}
                 ).get(f"{target}_btw_{btw}", None)
         )
 
-    def get_rank_results(self, mat_from: str, map_to: str, btw: str):
+    def get_rank_results(self, mat_from: str, map_to: str, btw: str, split_by: str = 'rand'):
         """
         Retrieve rank results from the rank map.
 
@@ -318,6 +318,7 @@ Graph path:                     {self.graph_path}
             map_from (str): The source mapping identifier, either "subj", or "inst".
             map_to (str): The target mapping identifier, either "subj", or "inst".
             btw (str): The between-group comparison identifier, either "split" or "var".
+            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
 
         Returns:
             RankResults: A named tuple containing:
@@ -326,6 +327,7 @@ Graph path:                     {self.graph_path}
                   mapping and between-group comparison.
         """
 
+        split_by_prefix = "cat_" if split_by == "cate" else ""
         RankResults = namedtuple("RankResults", ["dims", "mat"])
         return RankResults(
             dims=(
@@ -333,7 +335,7 @@ Graph path:                     {self.graph_path}
             ),
             mat=self.rank_map.rank_results.get(
                 f"{mat_from}_to_{map_to}", {}
-                ).get(f"btw_{btw}", None)
+                ).get(f"{split_by_prefix}btw_{btw}", None)
         )
 
     def get_top_map(self, map_from: str, map_to: str):

@@ -79,8 +79,8 @@ Results are saved to `tutorial/indimap_results/` and plots to `tutorial/indimap_
     **Details:**
     - `task_name`: Name of the task for you to identify the object (Default: `'Task'`).
     - `model_name`: Name of the model for you to identify the object (Default: `'Model'`).
-    - `subj_data` (required): DataFrame containing human data, loaded from `data/human.csv` in this example.
-    - `inst_data` (required): DataFrame containing model data, loaded from `data/rtnet.csv` in this example.
+    - `subj_data` (required): DataFrame containing human data, loaded from `tutorial/data/human.csv` in this example.
+    - `inst_data` (required): DataFrame containing model data, loaded from `tutorial/data/rtnet.csv` in this example.
     - `subj_column_name`: Column name for subjects in the subject data (Default: `'subj'`).
     - `inst_column_name`: Column name for instances in the instance data (Default: `'inst'`).
     - `stim_column_name`: Column name for stimulus categories, used only when `map_category=True` or `map_confusion=True` (Default: `'stim'`).
@@ -88,7 +88,7 @@ Results are saved to `tutorial/indimap_results/` and plots to `tutorial/indimap_
     - `map_variables`: List of variables to map. Make sure that the variable name is consistent in both human and model dataset (e.g., accuracy, reaction time, confidence). The first variable is treated as accuracy (see [Data Requirements](#data-requirements)) (Default: `['acc', 'conf']`).
     - `map_together` (required): Column name to map together. Make sure that the variable name is consistent in both human and model dataset (e.g., image index, stimulus index).
     - `map_separate` (required): Column name to map separately. Make sure that the variable name is consistent in both human and model dataset. If you do not wish to map any variables separately, create a dummy column with a single value in all rows to ensure the code runs correctly (e.g., `'cond'`). The dummy column acts as a placeholder and does not affect the mapping process.
-    - `map_confusion`: If `True`, additionally maps the confusion matrix (stimulus x response) as an extra metric named `confuse_mat` in CorrMap, RankMap, and TopMap. Requires `stim_column_name` and `resp_column_name` columns in both datasets (Default: `False`).
+    - `map_confusion`: If `True`, additionally maps the confusion matrix (stimulus x response) as an extra metric named `confuse_mat` in CorrMap, RankMap, and TopMap. Requires `stim_column_name` and `resp_column_name` columns in both datasets. Cannot be combined with `map_category=True` (Default: `False`).
     - `map_category`: If `True`, additionally computes CorrMap and RankMap using splits of stimulus categories (from `stim_column_name`) instead of random splits of images. Retrieve these results with `split_by='cate'` (Default: `False`).
     - `bootstrap_iterations`: Number of bootstrap iterations (Default: `1000`).
     - `bootstrap_seed`: Seed for bootstrap sampling (Default: `42`).
@@ -136,7 +136,7 @@ Results are saved to `tutorial/indimap_results/` and plots to `tutorial/indimap_
     mnist_rtnet.plot_dims()
     mnist_rtnet.plot_pred()
     ```
-    Plots are saved to `graph_path`. Between-metric plots require at least two `map_variables`.
+    Plots are saved to `graph_path`. Plotting requires at least two `map_variables`; with a single variable, compute and retrieve results without plotting.
 
 6. **Retrieve quantitative results:**
     Every getter returns a named tuple with a `dims` field describing each axis and a `mat` field holding the results:

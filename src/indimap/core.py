@@ -43,6 +43,7 @@ class IndiMap:
             map_confusion: bool, optional
                 Whether to compute and compare confusion matrix (default: False).
                 Requires `stim_column_name` and `resp_column_name` columns in both DataFrames.
+                Cannot be combined with `map_category`.
             map_category: bool, optional
                 Whether or not to compute and compare across category mapping (default: False).
                 Categories are read from `stim_column_name`.

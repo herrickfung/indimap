@@ -6,20 +6,24 @@ import pandas as pd
 from . import stat_func
 
 
-def append_confusion_matrix(df: pd.DataFrame) -> pd.DataFrame:
+def append_confusion_matrix(df: pd.DataFrame,
+                            stim_name: str = 'stim',
+                            resp_name: str = 'resp',
+                            ) -> pd.DataFrame:
     """
-    This will compute per row confusion matrix and append it to the dataframe
+    This will compute per row confusion matrix and append it to a copy of the dataframe
     """
 
     # infer categories from union stim/resp
-    categories = sorted(set(df['stim'].dropna()) | set(df['resp'].dropna()))
+    df = df.copy()
+    categories = sorted(set(df[stim_name].dropna()) | set(df[resp_name].dropna()))
     label_to_idx = {cat: i for i, cat in enumerate(categories)}
     n_types = len(categories)
     confuse_mats = np.zeros((len(df), n_types, n_types), dtype=int)
 
-    valid = df['stim'].notna() & df['resp'].notna()
-    stim_idx = df.loc[valid, 'stim'].map(label_to_idx).to_numpy()
-    resp_idx = df.loc[valid, 'resp'].map(label_to_idx).to_numpy()
+    valid = df[stim_name].notna() & df[resp_name].notna()
+    stim_idx = df.loc[valid, stim_name].map(label_to_idx).to_numpy()
+    resp_idx = df.loc[valid, resp_name].map(label_to_idx).to_numpy()
     row_idx = np.where(valid)[0]
     confuse_mats[row_idx, stim_idx, resp_idx] = 1
     df['confuse_mat'] = list(confuse_mats)
@@ -38,7 +42,9 @@ def convert_to_array(df: pd.DataFrame,
                      var_name: str,
                      tgt_name: str, 
                      sep_name: str,
-                     compute_confusion: bool = False
+                     compute_confusion: bool = False,
+                     stim_name: str = 'stim',
+                     resp_name: str = 'resp',
                      ) -> np.ndarray:
     """
     Convert dataframe to numpy array.
@@ -50,11 +56,14 @@ def convert_to_array(df: pd.DataFrame,
     var_name (str): Variable column name.
     tgt_name (str): Variable column name that map together.
     sep_name (str): Variable column name that map separately. Separate in array.
+    compute_confusion (bool): Whether to compute confusion matrix.
+    stim_name (str): Stimulus column name for the confusion matrix.
+    resp_name (str): Response column name for the confusion matrix.
     ---------------------------------------------------------------------------
     """
 
     if compute_confusion:
-        df = append_confusion_matrix(df)
+        df = append_confusion_matrix(df, stim_name, resp_name)
         agg_dict = {col: 'mean' for col in df.select_dtypes(include='number').columns}
         agg_dict['confuse_mat'] = lambda x: sum(x)
 
@@ -389,7 +398,7 @@ def split_subj(n_subjs: int,
     for i in range(n_bs):
         bs_indices = np.random.permutation(all_indices)
         output_indices[i, 0, :] = bs_indices[:half_subjs]
-        output_indices[i, 1, :] = bs_indices[half_subjs:]
+        output_indices[i, 1, :] = bs_indices[half_subjs:2 * half_subjs]  # drop the leftover index if odd
     return output_indices
 
 

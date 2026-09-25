@@ -67,11 +67,6 @@ class TopMap:
         """ Loads precomputed results from CorrMap class"""
         self.corr_map.load_map()
 
-    def compute_corr_map(self):
-        """ Computes and saves in CorrMap"""
-        self.corr_map.compute_corr_maps()
-        self.corr_map.save_map()
-
     def compute_top_analysis(self):
         """Performs the top-level analysis for all subtypes of Maps"""
 
@@ -115,7 +110,7 @@ class TopMap:
 
         plt.clf()
         plt.figure(figsize=(6, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         n_metrics = len(self.corr_map.map_var)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
@@ -147,7 +142,7 @@ class TopMap:
         def plot_data(trans_data, title, filename):
             plt.clf()
             plt.figure(figsize=(6, 4))
-            colors = plt.cm.get_cmap('Dark2', 8)
+            colors = plt.get_cmap('Dark2', 8)
             map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
 
             for i, map in enumerate(map_types):
@@ -197,7 +192,7 @@ class TopMap:
         def plot_data(trans_data, title, filename):
             plt.clf()
             plt.figure(figsize=(6, 4))
-            colors = plt.cm.get_cmap('Dark2', 8)
+            colors = plt.get_cmap('Dark2', 8)
             map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
             xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' for i,j in metric_pairs]
 

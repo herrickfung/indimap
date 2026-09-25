@@ -4,6 +4,7 @@ contains all functions related to dimension analyses
 
 from matplotlib import rcParams
 from pathlib import Path
+import inspect
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import MDS
@@ -91,8 +92,11 @@ class DimsMap:
         """
 
         n_conds, n_mets, n_subjs, n_imgs = self.human_arr.shape
+        n_insts = self.model_arr.shape[2]
         half_subjs = int(n_subjs / 2)
+        half_insts = int(n_insts / 2)
         split_idx_array = map_func.split_subj(n_subjs, self.n_bs, self.bs_seed)
+        inst_split_idx_array = map_func.split_subj(n_insts, self.n_bs, self.bs_seed)
 
         fit_human = self.human_arr[:, :, split_idx_array[0, 0], :]
         unfit_human = self.human_arr[:, :, split_idx_array[0, 1], :]
@@ -106,10 +110,10 @@ class DimsMap:
         same_human_proj, same_human_scaled = project(data = fit_human, center = True)
         diff_human_proj, diff_human_scaled = project(data = unfit_human, center = True)
 
-        model_proj = np.empty((self.n_bs, n_conds, n_mets, self.n_comps, half_subjs))
-        model_scaled = np.empty((self.n_bs, n_conds, n_mets, half_subjs, n_imgs))
+        model_proj = np.empty((self.n_bs, n_conds, n_mets, self.n_comps, half_insts))
+        model_scaled = np.empty((self.n_bs, n_conds, n_mets, half_insts, n_imgs))
         for i in range(self.n_bs):
-            fit_model = self.model_arr[:, :, split_idx_array[i, 1], :]
+            fit_model = self.model_arr[:, :, inst_split_idx_array[i, 1], :]
             model_proj[i], model_scaled[i] = project(
                 data = fit_model,
                 center=True
@@ -150,6 +154,7 @@ class DimsMap:
 
         # package output
         self.split_half_pca_results = {"split_info": split_idx_array,
+                                       "inst_split_info": inst_split_idx_array,
                                        "pca": pca,
                                        "scaler": scaler,
                                        "proj_same_human_var": same_human_proj_var,
@@ -197,19 +202,39 @@ class DimsMap:
         # perform mds
         results = np.empty((merge_arr.shape[0], merge_arr.shape[1], 2))
         for i in range(merge_arr.shape[0]):
-            mds = MDS(n_components=2, dissimilarity='precomputed', 
-                      random_state=self.bs_seed
-                      )
+            mds = MDS(**self._mds_kwargs(self.bs_seed))
             corr_mat = map_func.compute_full_corr_matrix(
                 merge_arr[i, :, :],
                 merge_arr[i, :, :]
             )
             results[i,...] = mds.fit_transform(1 - corr_mat)
 
-        # reshape results to split human and model
-        human, model = np.split(results, 2, axis=1)
-        results = np.stack((human, model), axis = 1)
+        # reshape results to split human and model, pad the smaller group with nan
+        n_subjs = self.human_arr.shape[2]
+        n_max = max(n_subjs, self.model_arr.shape[2])
+        human, model = results[:, :n_subjs], results[:, n_subjs:]
+        pad = lambda arr: np.pad(arr, ((0, 0), (0, n_max - arr.shape[1]), (0, 0)),
+                                 constant_values=np.nan)
+        results = np.stack((pad(human), pad(model)), axis = 1)
         self.mds_results = results
+
+    @staticmethod
+    def _mds_kwargs(seed: int) -> dict:
+        """
+        MDS arguments on precomputed dissimilarity, consistent across scikit-learn versions.
+        n_init and init follow scikit-learn 1.4 defaults, as defaults changed in later versions.
+        eps is left to the default, as its convergence criterion changed in scikit-learn 1.7.
+        """
+
+        kwargs = dict(n_components=2, n_init=4, max_iter=300, random_state=seed)
+        params = inspect.signature(MDS).parameters
+        if 'metric_mds' in params:  # dissimilarity was renamed to metric in scikit-learn 1.8
+            kwargs.update(metric='precomputed', metric_mds=True)
+        else:
+            kwargs.update(dissimilarity='precomputed', metric=True)
+        if 'init' in params:
+            kwargs.update(init='random')
+        return kwargs
 
     def plot_mds(self) -> None:
         """plot mds results"""
@@ -218,7 +243,7 @@ class DimsMap:
 
         plt.clf()
         fig, ax = plt.subplots(1, n_metrics, figsize=(n_metrics * 3, 3))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
 
         for i in range(n_metrics):
             ax[i].scatter(self.mds_results[i, 0, :, 0], self.mds_results[i, 0, :, 1], 
@@ -273,7 +298,7 @@ class DimsMap:
         n_conds, n_metrics, _, _ = self.human_arr.shape
         plt.clf()
         fig, ax = plt.subplots(n_conds, n_metrics, figsize=(6, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         x_axis = np.arange(0, self.n_comps)
 
         # Ensure ax is always a 2D array

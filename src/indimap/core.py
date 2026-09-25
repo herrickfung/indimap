@@ -31,16 +31,21 @@ class IndiMap:
                 Model/Instance identifier in the DataFrame (default: 'inst').
             stim_column_name: str, optional
                 Stimulus identifier in the DataFrame (default: 'stim').
+            resp_column_name: str, optional
+                Response identifier in the DataFrame, used only for the confusion matrix (default: 'resp').
             map_variables : list of str, optional
                 Column names to map/correlate on (default: ['acc', 'conf']).
-            map_together : list of str, optional
-                Variables to map/correlate together (e.g., image_index, stimulus).
-            map_separate : list of str, optional
-                Variables to map/correlate separately. The resulting map will be averaged after mapping.
+                The first variable is treated as accuracy when checking for extreme performers.
+            map_together : str
+                Column name of the items to map/correlate together (e.g., image_index, stimulus).
+            map_separate : str
+                Column name of the conditions to map/correlate separately. The resulting map will be averaged after mapping.
             map_confusion: bool, optional
                 Whether to compute and compare confusion matrix (default: False).
+                Requires `stim_column_name` and `resp_column_name` columns in both DataFrames.
             map_category: bool, optional
                 Whether or not to compute and compare across category mapping (default: False).
+                Categories are read from `stim_column_name`.
             bootstrap_iterations : int, optional
                 Number of bootstrap iterations (default: 1000).
             bootstrap_seed : int, optional
@@ -48,9 +53,9 @@ class IndiMap:
             nComp_PCA : int, optional
                 Number of components for PCA (default: 10).
             output_path : str, optional
-                Path for storing output (default: 'IndiMap_Result/').
+                Path for storing output (default: 'IndiMap_Result').
             graph_path: str, optional
-                Path for storing plots (default: 'IndiMap_Plots/').
+                Path for storing plots (default: 'IndiMap_Plots').
         """
 
         default_config = {
@@ -59,6 +64,7 @@ class IndiMap:
             'subj_column_name': 'subj',
             'inst_column_name': 'inst',
             'stim_column_name': 'stim',
+            'resp_column_name': 'resp',
             'map_variables': ['acc', 'conf'],
             'map_confusion': False,
             'map_category': False,
@@ -148,11 +154,9 @@ Graph path:                     {self.graph_path}
         if load_exists:
             self.rank_map.load_all(self.output_path)
         else:
-            corr_path = self.output_path / 'CorrMap_results.npz'
-            if corr_path.is_file():
-                self.rank_map.load_map_from_corr(self.output_path)
-            else:
-                self.rank_map.compute_corr_map()
+            if not self.corr_map.check_exist():
+                self.compute_corr()
+            self.rank_map.load_map_from_corr(self.output_path)
             self.rank_map.compute_rank_analysis()
             self.rank_map.save_all(self.output_path)
 
@@ -161,11 +165,9 @@ Graph path:                     {self.graph_path}
         if load_exists:
             self.top_map.load_all(self.output_path)
         else:
-            corr_path = self.output_path / 'CorrMap_results.npz'
-            if corr_path.is_file():
-                self.top_map.load_map_from_corr(self.output_path)
-            else:
-                self.top_map.compute_corr_map()
+            if not self.corr_map.check_exist():
+                self.compute_corr()
+            self.top_map.load_map_from_corr(self.output_path)
             self.top_map.compute_top_analysis()
             self.top_map.save_all(self.output_path)
 
@@ -252,7 +254,9 @@ Graph path:                     {self.graph_path}
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
-            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
+            split_by (str): The method for splitting the data, either "rand" for random image splits
+                or "cate" for category-based splits (default: "rand"). "cate" requires
+                `map_category=True` and is not available for "inst" to "inst".
 
         Returns:
         CorrelationMapping
@@ -268,10 +272,11 @@ Graph path:                     {self.graph_path}
             'rand': self.corr_map.corr_maps,
             'cate': self.corr_map.cat_corr_maps,
         }
+        split_dim = "bootstrap iterations" if split_by == 'rand' else "category splits"
 
         return CorrelationMapping(
             dims=(
-            "Dimensions: bootstrap iterations x split-half x metrics x "
+            f"Dimensions: {split_dim} x split-half x metrics x "
             f"{map_from} x {map_to}"
             ),
             mat=maps[split_by].get(f"{map_from}_to_{map_to}", None)
@@ -284,14 +289,18 @@ Graph path:                     {self.graph_path}
         Args:
             map_from (str): The source mapping identifier, either "subj", or "inst".
             map_to (str): The target mapping identifier, either "subj", or "inst".
-            target (str): The target variable for which correlation results are retrieved, either "subj", or "inst".
+            target (str): The target variable for which correlation results are retrieved, 
+                either "subj", "inst", "subj_gp", or "inst_gp". "subj" refers to the rows (map_from) 
+                and "inst" refers to the columns (map_to) of the correlation map. The "_gp" variants
+                compare each target against all other targets instead of itself.
             btw (str): The between-group comparison identifier, either "split" or "var".
-            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
+            split_by (str): The method for splitting the data, either "rand" for random image splits
+                or "cate" for category-based splits (default: "rand").
 
         Returns:
             namedtuple: A `CorrelationResults` namedtuple containing:
                 - dims (str): A description of the dimensions of the correlation results.
-                - mat (np.ndarray): The correlation results matrix for the specified parameters.
+                - mat (np.ndarray or None): The correlation results matrix for the specified parameters.
         """
 
         CorrelationResults = namedtuple("CorrelationResults", ["dims", "mat"])
@@ -300,17 +309,19 @@ Graph path:                     {self.graph_path}
             'rand': self.corr_map.corr_results,
             'cate': self.corr_map.cat_corr_results,
         }
+        split_dim = "bootstrap iterations" if split_by == 'rand' else "category splits"
+        met_dim = "metrics" if btw == 'split' else "metric pairs"
+        tgt_dim = map_from if target.startswith('subj') else map_to
 
         return CorrelationResults(
             dims=(
-            f"Dimensions: bootstrap iterations x metrics x {target}"
+            f"Dimensions: {split_dim} x {met_dim} x {tgt_dim}"
             ),
-            mat=maps[split_by].get(
-                f"{map_from}_to_{map_to}", {}
-                ).get(f"{target}_btw_{btw}", None)
+            mat=(maps[split_by].get(f"{map_from}_to_{map_to}") or {}
+                 ).get(f"{target}_btw_{btw}", None)
         )
 
-    def get_rank_results(self, mat_from: str, map_to: str, btw: str, split_by: str = 'rand'):
+    def get_rank_results(self, map_from: str, map_to: str, btw: str, split_by: str = 'rand'):
         """
         Retrieve rank results from the rank map.
 
@@ -318,24 +329,26 @@ Graph path:                     {self.graph_path}
             map_from (str): The source mapping identifier, either "subj", or "inst".
             map_to (str): The target mapping identifier, either "subj", or "inst".
             btw (str): The between-group comparison identifier, either "split" or "var".
-            split_by (str): The method for splitting the data, either "rand" for random splits or "cate" for stimulus-based splits (default: "rand").
+            split_by (str): The method for splitting the data, either "rand" for random image splits
+                or "cate" for category-based splits (default: "rand").
 
         Returns:
             RankResults: A named tuple containing:
                 - dims (str): Description of the dimensions of the rank results.
-                - mat (np.ndarray): The rank results matrix corresponding to the specified 
+                - mat (np.ndarray or None): The rank results matrix corresponding to the specified 
                   mapping and between-group comparison.
         """
 
         split_by_prefix = "cat_" if split_by == "cate" else ""
+        split_dim = "bootstrap iterations" if split_by == 'rand' else "category splits"
+        met_dim = "metrics" if btw == 'split' else "metric pairs"
         RankResults = namedtuple("RankResults", ["dims", "mat"])
         return RankResults(
             dims=(
-            "Dimensions: bootstrap iterations x metrics"
+            f"Dimensions: {split_dim} x {met_dim}"
             ),
-            mat=self.rank_map.rank_results.get(
-                f"{mat_from}_to_{map_to}", {}
-                ).get(f"{split_by_prefix}btw_{btw}", None)
+            mat=((self.rank_map.rank_results or {}).get(f"{map_from}_to_{map_to}") or {}
+                 ).get(f"{split_by_prefix}btw_{btw}", None)
         )
 
     def get_top_map(self, map_from: str, map_to: str):
@@ -348,7 +361,7 @@ Graph path:                     {self.graph_path}
             map_to (str): The target matrix identifier, either "subj" or "inst".
 
         Returns:
-        CorrelationMapping
+        TopMapping
             A named tuple containing:
             - dims (str): A description of the dimensions of the correlation map.
             - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
@@ -366,49 +379,49 @@ Graph path:                     {self.graph_path}
 
     def get_top_ct(self, map_from: str, map_to: str):
         """
-        Retrieve the count of the best mapped target for each source matrix.
+        Retrieve the number of times each target is the best mapped target of a source.
 
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
 
         Returns:
-        CorrelationMapping
+        TopCount
             A named tuple containing:
-            - dims (str): A description of the dimensions of the correlation map.
-            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+            - dims (str): A description of the dimensions of the count matrix.
+            - mat (numpy.ndarray or None): The count matrix if it exists, 
               otherwise None.
         """
 
         TopCount = namedtuple("TopCount", ["dims", "mat"])
         return TopCount(
             dims=(
-            "Dimensions: bootstrap iterations x split-half x metrc"
-            f"{map_from}"
+            "Dimensions: bootstrap iterations x split-half x metrics x "
+            f"{map_to}"
             ),
             mat=self.top_map.top_ct.get(f"{map_from}_to_{map_to}", None)
         )
 
     def get_top_corr(self, map_from: str, map_to: str):
         """
-        Retrieve the correlation valules of the best mapped target for each source matrix.
+        Retrieve the correlation values of the best mapped target for each source matrix.
 
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
 
         Returns:
-        CorrelationMapping
+        TopCorr
             A named tuple containing:
-            - dims (str): A description of the dimensions of the correlation map.
-            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+            - dims (str): A description of the dimensions of the correlation values.
+            - mat (numpy.ndarray or None): The correlation values if they exist, 
               otherwise None.
         """
 
         TopCorr = namedtuple("TopCorr", ["dims", "mat"])
         return TopCorr(
             dims=(
-            "Dimensions: bootstrap iterations x split-half x metrc x"
+            "Dimensions: bootstrap iterations x split-half x metrics x "
             f"{map_from}"
             ),
             mat=self.top_map.top_corr.get(f"{map_from}_to_{map_to}", None)
@@ -425,35 +438,36 @@ Graph path:                     {self.graph_path}
             corr_on (str): The metric to correlate on, either "ct", or "corr".
 
         Returns:
-        CorrelationMapping
+        TopResults
             A named tuple containing:
-            - dims (str): A description of the dimensions of the correlation map.
+            - dims (str): A description of the dimensions of the result matrix.
             - mat (numpy.ndarray or None): The result matrix if it exists, 
               otherwise None.
         """
 
+        met_dim = "metrics" if btw == 'split' else "metric pairs"
         TopResults = namedtuple("TopResults", ["dims", "mat"])
         return TopResults(
             dims=(
-            "Dimensions: bootstrap iterations x metrics"
+            f"Dimensions: bootstrap iterations x {met_dim}"
             ),
-            mat=self.top_map.top_results.get(
-                f"{map_from}_to_{map_to}", {}
-                ).get(f"{corr_on}_btw_{btw}", None)
+            mat=(self.top_map.top_results.get(f"{map_from}_to_{map_to}") or {}
+                 ).get(f"{corr_on}_btw_{btw}", None)
         )
 
     def get_top_expo(self, map_from: str, map_to: str):
         """
-        Retrieve the top map exponential count distributuion results
+        Retrieve the top map exponential count distribution results
 
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
 
         Returns:
-        Slope and intercept of the exponential distribution fit for each metric
+        TopExpo
+            Intercept and slope of the exponential distribution fit for each metric.
             A named tuple containing:
-            - dims (str): A description of the dimensions of the correlation map.
+            - dims (str): A description of the dimensions of the result matrix.
             - mat (numpy.ndarray or None): The result matrix if it exists, 
               otherwise None.
         """
@@ -461,38 +475,41 @@ Graph path:                     {self.graph_path}
         TopExpo = namedtuple("TopExpo", ["dims", "mat"])
         return TopExpo(
             dims=(
-            "Dimensions: repetitions x metrics x intercept/slope"
+            "Dimensions: (bootstrap iterations x split-half) x metrics x intercept/slope"
             ),
-            mat=self.top_map.top_results.get(f"{map_from}_to_{map_to}", {}
-            ).get('expo_slope', None)
+            mat=(self.top_map.top_results.get(f"{map_from}_to_{map_to}") or {}
+                 ).get('expo_slope', None)
         )
 
 
     def get_top_iden(self, map_from: str, map_to: str, target: str):
         """
-        Retrieve the results for identifiability analyses
+        Retrieve the results for identifiability analyses.
+        The best mapped target of each source is identified in the first split-half,
+        and its correlation is evaluated in the second split-half.
 
         Args:
             map_from (str): The source matrix identifier, either "subj" or "inst".
             map_to (str): The target matrix identifier, either "subj" or "inst".
-            target (str): The top matched pair or group, either "pair" or "gp".
+            target (str): Either "pair" for the correlation with the best mapped target,
+                or "gp" for the mean correlation with all other targets.
 
         Returns:
-        CorrelationMapping
+        TopIden
             A named tuple containing:
-            - dims (str): A description of the dimensions of the correlation map.
-            - mat (numpy.ndarray or None): The correlation map matrix if it exists, 
+            - dims (str): A description of the dimensions of the result matrix.
+            - mat (numpy.ndarray or None): The result matrix if it exists, 
               otherwise None.
         """
 
         TopIden = namedtuple("TopIden", ["dims", "mat"])
         return TopIden(
             dims=(
-            "Dimensions: bootstrap iterations x split-half x metrics x "
+            "Dimensions: bootstrap iterations x metrics x "
             f"{map_from}"
             ),
-            mat=self.top_map.top_results.get(f"{map_from}_to_{map_to}", {}
-            ).get(f"top_{target}_btw_split", None)
+            mat=(self.top_map.top_results.get(f"{map_from}_to_{map_to}") or {}
+                 ).get(f"top_{target}_btw_split", None)
         )
 
     def get_mds(self):
@@ -501,50 +518,46 @@ Graph path:                     {self.graph_path}
         Returns:
             namedtuple: An MDS_Results namedtuple containing:
                 - dims (str): A description of the dimensions in the MDS results.
-                - mat (array-like): The MDS results matrix
+                - mat (array-like): The MDS results matrix. If the number of subjects and
+                  instances differ, the smaller group is padded with nan.
         """
 
         MDS_Results = namedtuple("MDS_Results", ["dims", "mat"])
         return MDS_Results(
             dims=(
-            "Dimensions: metrics x human/model x N_subjs x 2 MDS dimensions"
+            "Dimensions: metrics x human/model x max(N_subjs, N_insts) x 2 MDS dimensions"
             ),
             mat=self.dims_map.mds_results
         )
 
-    def get_pca_results(self, fit_on: str, proj_to: str, center: bool, scramble: bool):
+    def get_pca_results(self, proj_to: str):
         """
-        Retrieve PCA results based on specified parameters.
+        Retrieve split-half PCA results.
+        PCA is fitted on a random half of the subjects, and the explained variance
+        of each component is computed after projecting the specified data onto it.
 
         Args:
-            fit_on (str): The dataset or condition on which the PCA was fitted (e.g., 'human', 'model').
-            proj_to (str): The projection target (e.g., 'human', 'model').
-            center (bool): If True, use centered PCA results; otherwise, use uncentered PCA results.
-            scramble (bool): If True, use scrambled projection results; otherwise, use standard projection results.
+            proj_to (str): The data projected onto the PCA components, either
+                "same_human" (the half of subjects used for fitting),
+                "diff_human" (the held-out half of subjects),
+                "scrm_human" (the fitted half of subjects with image order scrambled), or
+                "model" (a random half of the instances).
 
         Returns:
             namedtuple: A named tuple `PCA_Results` containing:
                 - dims (str): Description of the dimensions of the PCA results.
-                - mat (numpy.ndarray): The PCA results matrix corresponding to the specified parameters.
+                - mat (numpy.ndarray or None): Explained variance of each PCA component.
         """
 
-        if center:
-            center_text = 'centered'
+        if proj_to in ['same_human', 'diff_human']:
+            dims = "Dimensions: conditions x metrics x PCA components"
         else:
-            center_text = 'uncentered'
-        if scramble:
-            proj = f'P_S_{proj_to}'
-        else:
-            proj = f'P_{proj_to}'
+            dims = "Dimensions: bootstrap iterations x conditions x metrics x PCA components"
 
         PCA_Results = namedtuple("PCA_Results", ["dims", "mat"])
         return PCA_Results(
-            dims=(
-            "Dimensions: bootstrap iterations x conditions x metrics x \
-            x PCA components x human/model"
-            ""
-            ),
-            mat=self.dims_map.pca_results[center_text][fit_on][proj]
+            dims=dims,
+            mat=(self.dims_map.split_half_pca_results or {}).get(f"proj_{proj_to}_var", None)
         )
 
     def get_pred_results(self, by: str, using: str, within_metric: bool):
@@ -552,38 +565,34 @@ Graph path:                     {self.graph_path}
         Retrieve prediction results based on specified parameters.
         This function fetches prediction results from the `pred_map` attribute
         using the specified grouping, method, and metric type.
+        Each human subject's behavior is predicted from other subjects or from instances.
 
         Args:
             by (str): Perform prediction by this variable, either 'subj' or 'inst'.
             using (str): The method used for prediction. Options include:
-                         'rand', 'avg', 'corr', 'ols', 'lasso', 'ridge'.
+                         'rand', 'avg', 'corr'.
                 1. 'rand' - Random individual.
                 2. 'avg' - Average of all individuals.
                 3. 'corr' - Weighted average of all individuals by CorrMap.
-                4. 'ols' - Ordinary Least Squares regression.
-                5. 'lasso' - L1 Lasso regression.
-                6. 'ridge' - L2 Ridge regression.
             within_metric (bool): If True, retrieves results for within metrics predictions.
                                   If False, retrieves results across metrics predictions.
 
         Returns:
             namedtuple: A named tuple `PredResults` containing:
                 - dims (str): Description of the dimensions of the prediction results.
-                - metric (list or str): The order of the metric dimension.
-                - mat (Any): The prediction results matrix retrieved from `pred_map`.
+                - metric (list): The order of the metric dimension. For across metric predictions,
+                  each pair is (predictor metric, predicted metric).
+                - mat (np.ndarray or None): The prediction results matrix retrieved from `pred_map`.
         """
 
         if within_metric:
             met_type = 'within'
             metric_pair = self.map_var
+            dims = 'Dimensions: bootstrap iterations x metrics x subj'
         else:
             met_type = 'across'
             metric_pair = list(permutations(self.map_var, 2))
-
-        if using in ['rand', 'avg', 'corr']:
-            dims = 'Dimensions: bootstrap iterations x metrics x subj'
-        else:
-            dims = 'Dimensions: condition x metrics x subj'
+            dims = 'Dimensions: bootstrap iterations x metric pairs x subj'
 
         PredResults = namedtuple("PredResults", ["dims", "metric", "mat"])
         return PredResults(

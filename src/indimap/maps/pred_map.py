@@ -7,8 +7,6 @@ from matplotlib import pyplot as plt
 from matplotlib import rcParams
 from itertools import permutations
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.model_selection import KFold
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from scipy.stats import sem
 from pathlib import Path
 import numpy as np
@@ -21,7 +19,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 from .corr_map import CorrMap
-from indimap.util import map_func, pred_func, stat_func
+from indimap.util import map_func
 
 
 class PredMap:
@@ -238,61 +236,6 @@ class PredMap:
 
         self.pred_results[within][source]['corr'] = output
 
-    def pred_from_fit(self, within : str, source : str) -> None:
-        """ Perform prediction analyses from fitting """
-
-        methods = ['ols', 'lasso', 'ridge']
-        for method in methods:
-            if method == 'ols':
-                model = LinearRegression()
-            elif method == 'lasso':
-                model = Lasso(max_iter=1000)
-            elif method == 'ridge':
-                model = Ridge(max_iter=1000)
-
-            X = self.raw_mat[source]
-            Y = self.raw_mat['subj']
-
-            n_conds, n_met, n_subjs, n_imgs = X.shape
-            if within == 'within':
-                met_pairs = [(i, i) for i in range(n_met)]
-            else:
-                met_pairs = list(permutations(range(n_met), 2))
-            n_met_pairs = len(met_pairs)
-
-            # init k fold and results
-            k = 5
-            kf = KFold(n_splits=k, shuffle=True, random_state=42)
-            stims = np.arange(n_imgs)
-            pred_acc_arr = np.empty((k, n_conds, n_met_pairs, n_subjs))
-
-            for fold, (train_idx, test_idx) in enumerate(kf.split(stims)):
-                # training
-                x_train = X[:, :, :, train_idx]; y_train = Y[:, :, :, train_idx]
-                W, C, A = pred_func.train_model_for_each(
-                    model=model, 
-                    X_train=x_train, 
-                    Y_train=y_train,
-                    within = within,
-                )
-
-                # testing
-                x_test = X[:, :, :, test_idx]; y_test = Y[:, :, :, test_idx]
-                pred_acc = pred_func.test_model_for_each(
-                    model=model,
-                    X_test=x_test,
-                    Y_test=y_test,
-                    W=W,
-                    C=C,
-                    A=A,
-                    within = within,
-                )
-                pred_acc_arr[fold] = pred_acc
-
-            # average across folds and write results
-            output = np.nanmean(pred_acc_arr, axis=0)  # n_conds, n_met_pars, n_subjs
-            self.pred_results[within][source][method] = output
-
     def plot_wn_var(self):
         """ plot results for within metric prediction """
 
@@ -317,7 +260,7 @@ class PredMap:
         # plot
         plt.clf()
         fig, axs = plt.subplots(1, n_met, figsize=(n_met * 10/3, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
         method_labels = ['Rand', 'Avg', 'Corr']
 
@@ -382,7 +325,7 @@ class PredMap:
         plt.clf()
         fig, axs = plt.subplots(n_met_pairs // 2, 2, figsize=(6.666, 4 * (n_met_pairs // 2)))
         axs = axs.flatten()
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         labels = ['Predict from Subject', 'Predict from Instance']
         method_labels = ['Rand', 'Avg', 'Corr']
 

@@ -42,11 +42,6 @@ class RankMap:
         """ Loads precomputed results from CorrMap class"""
         self.corr_map.load_map()
 
-    def compute_corr_map(self) -> None:
-        """ Computes and saves in CorrMap"""
-        self.corr_map.compute_corr_maps()
-        self.corr_map.save_map()
-
     def compute_rank_analysis(self) -> None:
         """Perform rank analyses on all maps."""
         map_dicts = [
@@ -97,7 +92,7 @@ class RankMap:
         # plot here
         plt.clf()
         plt.figure(figsize=(6, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
 
         for i, map in enumerate(map_types):
@@ -137,7 +132,7 @@ class RankMap:
         # plot here
         plt.clf()
         plt.figure(figsize=(6, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
         xticks_labels = [ f'{self.corr_map.map_var[i]}-{self.corr_map.map_var[j]}' 
                          for i,j in metric_pairs

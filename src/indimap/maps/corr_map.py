@@ -25,6 +25,7 @@ class CorrMap:
         self.human_iden = self.config.get('subj_column_name')
         self.model_iden = self.config.get('inst_column_name')
         self.stim_iden = self.config.get('stim_column_name')
+        self.resp_iden = self.config.get('resp_column_name')
         self.map_var = list(self.config.get('map_variables'))
         self.map_tgt = self.config.get('map_together')
         self.map_sep = self.config.get('map_separate')
@@ -89,24 +90,17 @@ class CorrMap:
         self.corr_maps = loaded['corr_maps'].item()
         self.cat_corr_maps = loaded['cat_corr_maps'].item()
 
-    def save_map(self):
-        """ Saves maps for other classes """
-        output = {
-            'corr_maps': self.corr_maps,
-            'cat_corr_maps': self.cat_corr_maps,
-        }
-        output_path = self.output_path / 'CorrMap_results.npz'
-        np.savez(output_path, **output)
-
     def compute_corr_maps(self, sep_conds: bool = False) -> None:
         """pipeline from raw data to correlation maps."""
         human_arr = map_func.convert_to_array(self.human, self.human_iden,
                                               self.map_var, self.map_tgt,
-                                              self.map_sep, self.map_confusion
+                                              self.map_sep, self.map_confusion,
+                                              self.stim_iden, self.resp_iden
                                               )
         model_arr = map_func.convert_to_array(self.model, self.model_iden,
                                               self.map_var, self.map_tgt,
-                                              self.map_sep, self.map_confusion
+                                              self.map_sep, self.map_confusion,
+                                              self.stim_iden, self.resp_iden
                                               )
         model_arr = map_func.check_for_extreme(human_arr, model_arr)
 
@@ -211,7 +205,7 @@ class CorrMap:
 
         plt.clf()
         plt.figure(figsize=(6, 4))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         n_metrics = len(self.map_var)
         map_types = ['subj_to_inst', 'subj_to_subj', 'inst_to_inst']
         map_labels = ['Subj to Inst', 'Subj to Subj', 'Inst to Inst']
@@ -255,7 +249,7 @@ class CorrMap:
         # plot here
         plt.clf()
         plt.figure(figsize=(8, 6))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         map_labels = ['Subj to Inst', 'Scrambled Subj to Inst', 
                      'Subj to Subj', 'Scrambled Subj to Subj',
                      'Inst to Inst', 'Scrambled Inst to Inst'
@@ -312,7 +306,7 @@ class CorrMap:
         # plot here
         plt.clf()
         plt.figure(figsize=(8, 6))
-        colors = plt.cm.get_cmap('Dark2', 8)
+        colors = plt.get_cmap('Dark2', 8)
         map_labels = ['Subj to Inst', 'Scrambled Subj to Inst', 
                      'Subj to Subj', 'Scrambled Subj to Subj',
                      'Inst to Inst', 'Scrambled Inst to Inst'
